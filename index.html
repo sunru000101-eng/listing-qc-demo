@@ -88,9 +88,18 @@ label:first-of-type{margin-top:0}
 .hits li b{color:var(--ink);font-weight:600}
 mark{background:color-mix(in srgb,var(--reject) 25%,transparent);color:inherit;border-radius:3px;padding:0 2px}
 
-.rewrite{margin-top:14px;background:var(--pass-bg);border:1px solid color-mix(in srgb,var(--pass) 25%,transparent);
+.rewrite{margin-top:14px;background:var(--panel);border:1px solid var(--line);
   border-radius:9px;padding:12px 14px;font-size:13px;line-height:1.7}
 .rewrite .t{font:600 11px/1 var(--mono);color:var(--pass);letter-spacing:.05em;margin-bottom:7px}
+.rewrite .t.ask{color:var(--review);margin-top:14px}
+.rwbody{background:var(--pass-bg);border:1px solid color-mix(in srgb,var(--pass) 22%,transparent);
+  border-radius:7px;padding:10px 12px;margin-bottom:9px}
+.rwlist{margin:0;padding-left:17px;font-size:12.5px;line-height:1.8}
+.rwlist.ok li{color:var(--pass)}
+.rwlist.ask li{color:var(--review)}
+.rwnote{margin-top:10px;padding-top:9px;border-top:1px solid var(--line-2);
+  font-size:12px;line-height:1.7;color:var(--ink-2)}
+.rwnote b{color:var(--ink)}
 
 /* eval */
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
@@ -440,17 +449,50 @@ function check(r){
 const verdictOf=(s,a,b)=>s<=a?"pass":s>=b?"reject":"review";
 const VN={pass:"自动通过",review:"转人工",reject:"打回"};
 
-/* ═══════════ 合规改写 ═══════════ */
-function rewrite(r,res){
-  let d=r.d;
-  LEX.forEach(L=>{if(L.exempt&&r.rt===L.exempt)return;d=d.replace(new RegExp(L.re.source,"g"),"▓")});
-  d=d.replace(/[^。！？]*▓[^。！？]*[。！？]?/g,"");
+/* ═══════════ 合规改写 ═══════════
+   只自动改「平台有权威依据」的部分：
+     · 违禁表述 —— 整句删除。删除不制造新的事实断言，是安全操作。
+     · 地铁距离 —— 用平台实测值订正。实测值就是权威数据。
+   不自动改「不知道哪边是真的」的部分：
+     · 装修 / 户型冲突 —— 可能是描述写错，也可能是字段填错，平台无从判断。
+       硬改等于替房东做了一个没有依据的断言，把一个错误变成两个。交回房东确认。 */
+function rewrite(r){
+  let d=r.d;const auto=[],ask=[];
+
+  LEX.forEach(L=>{
+    if(L.exempt&&r.rt===L.exempt)return;
+    if(!new RegExp(L.re.source).test(d))return;
+    auto.push(`删除含「${L.cat}」的整句`);
+    d=d.replace(new RegExp(L.re.source,"g"),"▓");
+  });
+  if(d.includes("▓"))d=d.replace(/[^。！？]*▓[^。！？]*[。！？]?/g,"");
+
+  const t=r.t+" "+r.d;
+  const m1=t.match(/地铁[^，。]{0,6}?(?:仅|约|只)?\s*([0-9]+)\s*米/);
+  const m2=t.match(/(?:步行|走路|走)\s*([0-9]+)\s*分钟(?:到|至|即到)?地铁/)||t.match(/地铁[^，。]{0,4}?(?:步行|走)?\s*([0-9]+)\s*分钟/);
+  const mClaim=m1?+m1[1]:(m2?+m2[1]*80:null);
+  if(mClaim&&r.mt&&r.mt>mClaim*2){
+    d=d.replace(/(?:仅|约|只)?\s*[0-9]+\s*米/,`约${r.mt}米`)
+       .replace(/(?:步行|走路|走)\s*[0-9]+\s*分钟(?=(?:到|至|即到)?地铁)/,`步行约${Math.round(r.mt/80)}分钟`)
+       .replace(/[，、]?\s*出门就是/,"");
+    auto.push(`地铁距离按平台实测值订正为 ${r.mt} 米`);
+  }
+
+  if(/精装|豪装|刚装修|重新装修/.test(t)&&/毛坯|简装/.test(r.dec))
+    ask.push(`描述称精装，装修字段填的是「${r.dec}」—— 请确认哪个准确`);
+  let claimN=0;
+  (t.match(/([0-9一两二三四五])(室|房|居)/g)||[]).forEach(s=>{
+    const n=CN[s[0]]||parseInt(s[0]);if(n>claimN)claimN=n});
+  const realN=parseInt(r.lay)||0;
+  if(claimN&&realN&&claimN!==realN)
+    ask.push(`描述提及 ${claimN} 居，字段填的是「${r.lay}」—— 请确认，或说明改造情况`);
   const miss=[];
   if(!r.or)miss.push("朝向");if(!r.fl)miss.push("楼层");if(!r.pay)miss.push("押付方式");
-  const dc=/精装|豪装|全屋定制/.test(r.t+r.d)&&/毛坯|简装/.test(r.dec);
-  if(dc)d=d.replace(/精装修?|豪装|全屋定制/g,r.dec);
+  if(miss.length)ask.push(`补充必填项：${miss.join("、")}`);
+  if(r.img<3)ask.push(`补充房源图片至 3 张以上（当前 ${r.img} 张）`);
+
   d=d.replace(/^[，。、\s]+/,"").trim();
-  return{d:d||"（原描述违规内容过多，建议房东重写）",miss,dc};
+  return{d:d||"（违规内容占比过高，建议房东重写描述）",auto,ask};
 }
 
 /* ═══════════ 渲染：质检台 ═══════════ */
@@ -495,10 +537,17 @@ function renderCheck(){
         `<li class="${h.k==='soft'?'soft':h.k==='info'?'info':''}">${h.s}</li>`).join("")}</ul>`:""}</div>`}).join("");
 
   if(v==="pass"){$("rw").innerHTML=""}
-  else{const rw=rewrite(r,res);
-    $("rw").innerHTML=`<div class="rewrite"><div class="t">建议替换文案（可一键回填给房东）</div>
-      ${rw.d}${rw.miss.length?`<div style="margin-top:9px;font-size:12.5px;opacity:.85">
-      ⚠ 仍需房东补充：<b>${rw.miss.join("、")}</b></div>`:""}</div>`}
+  else{const rw=rewrite(r);
+    $("rw").innerHTML=`<div class="rewrite">
+      <div class="t">机器直接改掉的部分</div>
+      <div class="rwbody">${rw.d}</div>
+      ${rw.auto.length?`<ul class="rwlist ok">${rw.auto.map(x=>`<li>${x}</li>`).join("")}</ul>`:
+        `<div style="font-size:12.5px;color:var(--ink-3)">本条没有可安全自动修改的内容。</div>`}
+      ${rw.ask.length?`<div class="t ask">必须回给房东确认的部分</div>
+        <ul class="rwlist ask">${rw.ask.map(x=>`<li>${x}</li>`).join("")}</ul>
+        <div class="rwnote">这几项平台无从判断谁对谁错——描述和字段冲突，可能是描述写错，也可能是字段填错。
+        <b>代房东改，等于替他做了一个没有依据的断言，把一个错误变成两个。</b>所以只提示，不代改。</div>`:""}
+    </div>`}
 }
 pick.onchange=()=>{cur=D[+pick.value];fill(cur);renderCheck()};
 $("run").onclick=renderCheck;
