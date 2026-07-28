@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>房源上架质检 Agent · Demo</title>
+<title>房源质检工作台</title>
 <style>
 :root{
   --bg:#f6f7f9; --panel:#fff; --panel-2:#fbfcfd; --ink:#12161c; --ink-2:#5b6572; --ink-3:#8b95a3;
@@ -128,7 +128,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 
 table{width:100%;border-collapse:collapse;font-size:12.5px}
 th{text-align:left;font-size:11px;color:var(--ink-3);font-weight:600;letter-spacing:.04em;
-  padding:8px 10px;border-bottom:1px solid var(--line);position:sticky;top:57px;background:var(--panel)}
+  padding:8px 10px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel)}
 td{padding:8px 10px;border-bottom:1px solid var(--line-2);vertical-align:top}
 tr.bad{background:var(--row-bad)}
 tr.fp{background:var(--row-fp)}
@@ -171,164 +171,182 @@ pre{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;pad
   overflow:auto;font:12px/1.65 var(--mono);color:var(--ink-2);margin:9px 0 0;white-space:pre-wrap}
 .hr{height:1px;background:var(--line);margin:26px 0}
 .spacer{height:16px}
+/* ── 队列 ── */
+.badge{font:600 10px/1 var(--mono);padding:4px 6px;border-radius:4px;background:var(--accent-bg);
+  color:var(--accent);letter-spacing:.06em;margin-left:9px;vertical-align:middle}
+.qhd{padding:13px 16px;border-bottom:1px solid var(--line);font-size:13px;font-weight:600;display:flex;align-items:center}
+.qhd .n{margin-left:auto;font:600 11.5px/1 var(--mono);color:var(--ink-3)}
+.qlist{max-height:640px;overflow:auto}
+.qi{display:flex;gap:11px;padding:11px 14px;border-bottom:1px solid var(--line-2);cursor:pointer;align-items:flex-start}
+.qi:hover{background:var(--panel-2)}
+.qi.on{background:var(--accent-bg)}
+.qi .qs{font:700 15px/1 var(--mono);min-width:29px;text-align:right;padding-top:2px}
+.qi .qt{font-size:13px;font-weight:600;line-height:1.4}
+.qi .qm{font-size:11.5px;color:var(--ink-3);margin-top:3px}
+.qempty{padding:40px 16px;text-align:center;color:var(--ink-3);font-size:13px;line-height:1.9}
+
+/* ── 详情与操作 ── */
+.dhd{margin-bottom:15px}
+.dhd h4{margin:0;font-size:15.5px;letter-spacing:-.2px}
+.dhd .meta{font-size:12px;color:var(--ink-3);margin-top:4px}
+.fields{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:13px}
+@media(max-width:620px){.fields{grid-template-columns:1fr 1fr}}
+.fields>div{background:var(--panel-2);border:1px solid var(--line-2);border-radius:7px;padding:7px 9px}
+.fk{font-size:10.5px;color:var(--ink-3);font-weight:600}
+.fv{font-size:12.5px;margin-top:2px;font-weight:600}
+.fv.na{color:var(--reject)}
+.ops{display:flex;gap:9px;margin-top:16px}
+.op{flex:1;border:1px solid var(--line);background:var(--panel);color:var(--ink-2);border-radius:9px;
+  padding:11px 6px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.op:hover{background:var(--panel-2)}
+.op.sug{border-width:2px;padding:10px 5px}
+.op.sug.pass{border-color:var(--pass);color:var(--pass);background:var(--pass-bg)}
+.op.sug.rev{border-color:var(--review);color:var(--review);background:var(--review-bg)}
+.op.sug.rej{border-color:var(--reject);color:var(--reject);background:var(--reject-bg)}
+.opnote{font-size:11.5px;color:var(--ink-3);margin-top:9px;text-align:center}
+
+/* ── 策略 ── */
+.polbar{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);
+  border-radius:10px;padding:11px 15px;margin-bottom:16px;font-size:13px;flex-wrap:wrap}
+.polbar .lb{font:600 10.5px/1 var(--mono);color:var(--ink-3);letter-spacing:.05em}
+.polbar b{font-family:var(--mono)}
+.polbar a{margin-left:auto;color:var(--accent);cursor:pointer;font-size:12.5px;font-weight:600}
+.cfg{display:flex;align-items:center;gap:16px;padding:13px 0;border-top:1px solid var(--line-2)}
+.cfg:first-of-type{border-top:0;padding-top:0}
+.cl{font-size:13.5px;font-weight:600}
+.cd{color:var(--ink-3);font-size:12px;margin-top:3px;line-height:1.65;max-width:520px}
+.seg{display:flex;gap:3px;background:var(--panel-2);padding:3px;border-radius:8px;border:1px solid var(--line);
+  margin-left:auto;flex-shrink:0}
+.seg button{border:0;background:transparent;color:var(--ink-2);font:inherit;font-size:12.5px;
+  padding:6px 11px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.seg button.on{background:var(--panel);color:var(--ink);font-weight:600}
+.toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%);background:var(--ink);color:var(--bg);
+  padding:11px 20px;border-radius:9px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;
+  transition:opacity .2s;z-index:60}
+.toast.on{opacity:1}
 </style>
 </head>
 <body>
 
 <header>
  <div class="hd">
-  <div class="logo"><span class="dot"></span>房源上架质检 Agent</div>
-  <div class="sub">Demo · 孙儒 · 2026.07</div>
+  <div class="logo"><span class="dot"></span>房源质检工作台<span class="badge">概念原型</span></div>
   <nav>
-   <button class="on" data-t="t1">质检台</button>
-   <button data-t="t2">评测台</button>
-   <button data-t="t3">上线结论</button>
+   <button class="on" data-t="t1">审核工作台</button>
+   <button data-t="t2">效果监控</button>
+   <button data-t="t3">策略与灰度</button>
   </nav>
  </div>
 </header>
 
 <div class="wrap">
 
-<!-- ============ TAB 1 ============ -->
 <section id="t1" class="on">
- <h2>质检台</h2>
- <p class="lead">房源提交后先过一遍机检，输出风险分与逐条命中原文，再给一版可直接替换的合规文案。左侧可选样本库里的房源，也可以直接改文案实时看分数变化。</p>
-
  <div class="split">
-  <div class="card pad">
-    <label>样本库（40 条，人工已标注）</label>
-    <select id="pick"></select>
-
-    <label>标题</label>
-    <textarea id="f_title" rows="2"></textarea>
-
-    <label>描述</label>
-    <textarea id="f_desc" rows="7"></textarea>
-
-    <div class="grid2">
-      <div><label>户型（结构化字段）</label><input type="text" id="f_layout"></div>
-      <div><label>装修（结构化字段）</label><input type="text" id="f_deco"></div>
-      <div><label>月租 / 同户型中位数</label><input type="text" id="f_price"></div>
-      <div><label>实测距地铁（米）</label><input type="text" id="f_metro"></div>
-      <div><label>朝向</label><input type="text" id="f_orient"></div>
-      <div><label>楼层</label><input type="text" id="f_floor"></div>
-      <div><label>押付方式</label><input type="text" id="f_pay"></div>
-      <div><label>图片数 / 出租方式</label><input type="text" id="f_misc"></div>
-    </div>
-    <button class="btn" id="run">重新质检</button>
+  <div class="card">
+   <div class="qhd">待审队列<span class="n" id="qn"></span></div>
+   <div class="qlist" id="queue"></div>
   </div>
-
-  <div>
-    <div id="verdict"></div>
-    <div class="spacer"></div>
-    <div class="card pad"><h3>验收维度（规则层 · 本地实时计算）</h3><div id="dims"></div></div>
-    <div id="rw"></div>
-
-    <details>
-      <summary>模型层：为什么规则层不够，以及我打算怎么补</summary>
-      <div class="note" style="margin-top:9px">
-        规则层抓的是<b>字面</b>违规。样本库里我故意埋了 3 条<b>语义类</b>违规（不含任何违禁词，但人工一眼判违规），规则层必然漏——见评测台的漏检清单。
-        这类只能上模型。但模型不该跑全量：<b>规则层已判 reject 的直接打回，不必再花 token</b>，模型层只跑规则层放行的部分。
-      </div>
-      <pre>【模型层 Prompt v0.1】
-你是租房平台的房源合规审核员。只判断下面这条房源描述是否存在
-"不含违禁关键词、但实质违规"的表述，输出 JSON。
-
-需要识别的实质违规（字面绕开也算）：
-1. 教育承诺 —— 不写"学区房"，但暗示与某学校的入学关联
-2. 身份/地域筛选 —— 不写"不租某某人"，但设置隐性人群门槛
-3. 投资诱导 —— 不写"升值"，但暗示租金或房价会涨
-4. 夸大承诺 —— 对安全、隔音、通勤时长等给出无法兑现的断言
-
-输出：{"hit":bool,"cat":"","evidence":"原文片段","reason":"一句话","conf":0-1}
-无法确定时 hit=false 并把 conf 压低，交人工——<b>宁可漏，不可误杀房东</b>。</pre>
-    </details>
-  </div>
+  <div id="detail"></div>
  </div>
 </section>
 
-<!-- ============ TAB 2 ============ -->
 <section id="t2">
- <h2>评测台</h2>
- <p class="lead">40 条样本（我自己造的合成数据，未使用任何平台真实数据），逐条人工标注 pass / review / reject 作为 ground truth。下面所有指标都是规则引擎当场跑出来的，拖动阈值会实时重算。</p>
-
+ <div class="polbar">
+  <span class="lb">当前生效策略</span>
+  风险分 ≤<b id="pA">30</b> 免人工上架，≥<b id="pB">70</b> 打回房东
+  <a data-goto="t3">调整策略 →</a>
+ </div>
  <div class="kpis" id="kpis"></div>
-
  <div class="card pad">
-   <h3>阈值（这两个数就是"上不上线"要定的东西）</h3>
-   <div class="sliders">
-     <div>
-       <div class="srow"><span>自动通过上限</span><b id="lblA">30</b></div>
-       <input type="range" id="thA" min="0" max="100" value="30">
-     </div>
-     <div>
-       <div class="srow"><span>直接打回下限</span><b id="lblB">70</b></div>
-       <input type="range" id="thB" min="0" max="100" value="70">
-     </div>
-   </div>
-   <div class="spacer"></div>
-   <div class="cm" id="cm"></div>
-   <div class="spacer"></div>
-   <div class="note" id="tradeoff"></div>
+  <h3>机检判定 vs 人工复核</h3>
+  <div class="cm" id="cm"></div>
+  <div class="spacer"></div>
+  <div class="note" id="tradeoff"></div>
  </div>
-
  <div class="spacer"></div>
-
  <div class="card">
-   <div class="pad" style="padding-bottom:4px"><h3 style="margin:0">逐条结果 <span class="tt" id="legend"></span></h3></div>
-   <div class="scroll">
-     <table>
-       <thead><tr>
-         <th style="width:52px">ID</th><th>房源</th><th style="width:58px">机检分</th>
-         <th style="width:74px">机检</th><th style="width:74px">人工</th><th style="width:200px">差异</th>
-       </tr></thead>
-       <tbody id="rows"></tbody>
-     </table>
-   </div>
+  <div class="pad" style="padding-bottom:4px"><h3 style="margin:0">逐条结果 <span class="tt" id="legend"></span></h3></div>
+  <div class="scroll">
+   <table>
+    <thead><tr>
+     <th style="width:54px">编号</th><th>房源</th><th style="width:60px">风险分</th>
+     <th style="width:76px">机检</th><th style="width:80px">人工复核</th><th style="width:210px">差异</th>
+    </tr></thead>
+    <tbody id="rows"></tbody>
+   </table>
+  </div>
  </div>
 </section>
 
-<!-- ============ TAB 3 ============ -->
 <section id="t3">
- <h2>上线结论</h2>
- <p class="lead">Demo 做到这里为止，剩下的是一个产品经理该给出的东西：这版能不能上、上到哪、怎么灰度、下一步补什么。</p>
-
- <div class="big">
-  <div class="t">建议</div>
-  <p id="c1"></p>
-  <p id="c2"></p>
-  <p id="c3"></p>
- </div>
-
  <div class="card pad">
-  <h3>不建议现在做的事（同样重要）</h3>
-  <ul style="margin:0;padding-left:20px;font-size:13.5px;line-height:1.85;color:var(--ink-2)">
-    <li><b style="color:var(--ink)">不做全自动打回。</b>误杀一个真房东的成本远高于放过一条脏房源——前者直接掉供给，后者还有租客举报作为第二道网。所以 reject 档的定位是"打回让房东改"，不是"封禁"。</li>
-    <li><b style="color:var(--ink)">不做图片 AI 生成美化。</b>技术上我做得了（前司干过视频转绘和物体擦除），但房源图美化会直接放大"图文不符"投诉，属于用技术制造业务问题。要做也只做去水印、亮度矫正这类不改变房屋事实的处理。</li>
-    <li><b style="color:var(--ink)">模型层不跑全量。</b>规则层已判 reject 的不必再花 token，模型层只覆盖规则层放行的部分，成本降到约四成。</li>
-  </ul>
+  <h3>判定阈值</h3>
+  <div class="sliders">
+   <div>
+    <div class="srow"><span>免人工上架上限</span><b id="lblA">30</b></div>
+    <input type="range" id="thA" min="0" max="100" value="30">
+   </div>
+   <div>
+    <div class="srow"><span>直接打回下限</span><b id="lblB">70</b></div>
+    <input type="range" id="thB" min="0" max="100" value="70">
+   </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="kpis" id="kpis2"></div>
+  <div class="note" id="thnote"></div>
  </div>
 
  <div class="spacer"></div>
 
  <div class="card pad">
-  <h3>如果拿到你们真实数据，我第一周会这么排</h3>
-  <ol class="week">
-   <li><b>把现有审核规则和拒绝理由捞出来</b>先不写代码。看人工审核最近 N 条的驳回理由分布，找出占比最高的三类——现在这 5 个维度是我拍的，真实分布大概率不长这样。</li>
-   <li><b>建真实评测集</b>从线上抽 300 条（按驳回理由分层抽样），拉一位审核同学一起标注。评测集的质量决定后面所有结论的可信度，这一步不能省。</li>
-   <li><b>规则层对齐真实规则</b>把 demo 里的词表和冲突规则换成平台实际的审核标准，在 300 条上跑基线。</li>
-   <li><b>接模型层，只跑规则层放行的部分</b>用第 2 天的评测集测漏检回收率和误杀增量，算清单条成本。</li>
-   <li><b>定阈值与灰度方案</b>拿真实指标重跑今天这张阈值表，产出"自动过 / 转人工 / 打回"三档的分界，并明确灰度范围（建议先新房东、不动老房东）。</li>
-   <li><b>和审核团队过一轮</b>让审核同学试用半天，收集他们不认可的判定——审核员是这个产品的真实用户，他们不用，指标再好也没用。</li>
-   <li><b>出上线结论</b>一页纸：上 / 不上 / 上到哪，附带回滚条件。</li>
-  </ol>
+  <h3>灰度范围</h3>
+  <div class="cfg">
+   <div><div class="cl">生效对象</div>
+    <div class="cd">新房东本就走全量人工审核，机检判错也不会比现状更差；老房东有历史信用分，误杀一次的关系成本更高。</div></div>
+   <div class="seg" id="segScope">
+    <button class="on" data-v="new">仅新房东</button>
+    <button data-v="all">全量房东</button>
+    <button data-v="off">仅记录不生效</button>
+   </div>
+  </div>
  </div>
 
- <div class="foot">
-  数据说明：本 demo 的 40 条房源为合成样本，人工标注（ground truth）由我本人完成，未使用任何平台真实数据。<br>
-  规则层为浏览器端实时计算，评测台所有指标随阈值实时重算，非预置结果。模型层尚未接入，Prompt 设计见「质检台 → 模型层」。
+ <div class="spacer"></div>
+
+ <div class="card pad">
+  <h3>自动回滚</h3>
+  <div class="cfg">
+   <div><div class="cl">触发条件</div>
+    <div class="cd">免人工上架的房源，事后举报率高于人工审核基线的这个倍数时，自动收紧阈值，不再走人工决策流程。</div></div>
+   <div class="seg" id="segRoll">
+    <button data-v="1.2">1.2 倍</button>
+    <button class="on" data-v="1.5">1.5 倍</button>
+    <button data-v="2">2 倍</button>
+   </div>
+  </div>
+  <div class="cfg">
+   <div><div class="cl">触发后动作</div><div class="cd" id="rollact"></div></div>
+  </div>
  </div>
+
+ <button class="btn" id="save">保存配置</button>
 </section>
+
+<div class="foot">
+ <details>
+  <summary>关于这个原型</summary>
+  <div style="margin-top:11px;line-height:1.9">
+   <b>数据</b>　40 条房源为合成样本，人工复核结论由作者标注，未使用任何平台真实数据。<br>
+   <b>计算</b>　五个质检维度全部为浏览器端实时计算；效果监控的指标随阈值实时重算，不是预置结果。<br>
+   <b>未接入</b>　语义层模型。规则层只抓字面违规，样本里有 3 条不含任何违禁词、但实质违规的房源（效果监控里标红的漏检行），规则层结构性抓不到。模型层不必跑全量——规则层已判打回的无需再算。<br>
+   <b>若接入真实数据</b>　第一周不写代码：先看审核团队最近的驳回理由分布，再按理由分层抽样建 300 条评测集，然后才对齐规则、定阈值、拉审核同学试用半天。规则两天能换，评测集换不掉。
+  </div>
+ </details>
+ <div style="margin-top:15px">房源质检工作台 · 概念原型 · 合成数据 · 孙儒 2026.07</div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 </div>
 
@@ -506,38 +524,89 @@ function rewrite(r){
   return{d:d||"（违规内容占比过高，建议房东重写描述）",auto,ask};
 }
 
-/* ═══════════ 渲染：质检台 ═══════════ */
-/* 默认加载 L05：装修字段冲突 + 地铁距离虚标两倍。
-   开局就得让人看见"它真的在交叉核对数据"，别让首屏停在一条 0 分的干净房源上。*/
-const DEFAULT_IDX=D.findIndex(r=>r.id==="L05");
-let cur=D[DEFAULT_IDX];
+/* ═══════════ 渲染层 ═══════════ */
 const $=id=>document.getElementById(id);
-const pick=$("pick");
-D.forEach((r,i)=>{const o=document.createElement("option");o.value=i;
-  o.textContent=`${r.id} · ${r.t.slice(0,22)}`;pick.appendChild(o)});
+const ACT={};                                    /* 审核员已处理的房源 id → 动作 */
+const pol={a:30,b:70,scope:"new",roll:"1.5"};    /* 当前生效策略 */
+let curIdx=D.findIndex(r=>r.id==="L05");
 
-function fill(r){
-  $("f_title").value=r.t; $("f_desc").value=r.d;
-  $("f_layout").value=r.lay; $("f_deco").value=r.dec;
-  $("f_price").value=`${r.p} / ${r.mkt}`; $("f_metro").value=r.mt;
-  $("f_orient").value=r.or||"（空）"; $("f_floor").value=r.fl||"（空）";
-  $("f_pay").value=r.pay||"（空）"; $("f_misc").value=`${r.img} 张 / ${r.rt}`;
+let tmr;
+function toast(m){const e=$("toast");e.textContent=m;e.classList.add("on");
+  clearTimeout(tmr);tmr=setTimeout(()=>e.classList.remove("on"),1900)}
+
+const ago=i=>{const m=4+i*7;return m<60?`${m} 分钟前`:`${Math.floor(m/60)} 小时前`};
+const COL={pass:"var(--pass)",review:"var(--review)",reject:"var(--reject)"};
+const BG={pass:"var(--pass-bg)",review:"var(--review-bg)",reject:"var(--reject-bg)"};
+
+/* ═══════════ 待审队列 ═══════════ */
+function renderQueue(){
+  const pend=D.map((r,i)=>({r,i})).filter(x=>!ACT[x.r.id]);
+  $("qn").textContent=`${pend.length} 条待审`;
+  if(!pend.length){
+    $("queue").innerHTML=`<div class="qempty">队列已清空<br>${D.length} 条房源全部处理完毕
+      <br><br><a id="rst" style="color:var(--accent);cursor:pointer;font-weight:600">重置队列</a></div>`;
+    $("rst").onclick=()=>{Object.keys(ACT).forEach(k=>delete ACT[k]);
+      curIdx=D.findIndex(r=>r.id==="L05");renderQueue();renderDetail()};
+    $("detail").innerHTML="";return;
+  }
+  $("queue").innerHTML=pend.map(x=>{
+    const s=check(x.r).score,v=verdictOf(s,pol.a,pol.b);
+    return `<div class="qi${x.i===curIdx?" on":""}" data-i="${x.i}">
+      <div class="qs" style="color:${COL[v]}">${s}</div>
+      <div><div class="qt">${x.r.t}</div>
+      <div class="qm">${x.r.dist}·${x.r.com} · ${x.r.p}元/月 · ${ago(x.i)}提交</div></div></div>`;
+  }).join("");
+  document.querySelectorAll(".qi").forEach(e=>e.onclick=()=>{
+    curIdx=+e.dataset.i;renderQueue();renderDetail()});
 }
-function readForm(){
-  const pm=$("f_price").value.split("/");
-  return{...cur,t:$("f_title").value,d:$("f_desc").value,lay:$("f_layout").value,dec:$("f_deco").value,
-    p:+pm[0]||cur.p,mkt:+(pm[1]||cur.mkt),mt:+$("f_metro").value||cur.mt,
-    or:$("f_orient").value.includes("空")?"":$("f_orient").value,
-    fl:$("f_floor").value.includes("空")?"":$("f_floor").value,
-    pay:$("f_pay").value.includes("空")?"":$("f_pay").value};
+
+/* ═══════════ 房源详情 ═══════════ */
+function renderDetail(){
+  if(!D.some(r=>!ACT[r.id]))return;
+  if(ACT[D[curIdx].id])curIdx=D.findIndex(r=>!ACT[r.id]);
+  const r=D[curIdx];
+  const na=v=>v?`<div class="fv">${v}</div>`:`<div class="fv na">未填</div>`;
+  $("detail").innerHTML=`
+   <div class="card pad">
+    <div class="dhd"><h4>${r.t}</h4>
+     <div class="meta">${r.id} · ${r.dist}·${r.com} · ${r.lay} · ${r.area}㎡ · ${r.p}元/月 · ${r.rt}</div></div>
+    <label>房源描述（可编辑，改完自动重新质检）</label>
+    <textarea id="ed" rows="4">${r.d}</textarea>
+    <div class="fields">
+     <div><div class="fk">装修</div>${na(r.dec)}</div>
+     <div><div class="fk">朝向</div>${na(r.or)}</div>
+     <div><div class="fk">楼层</div>${na(r.fl)}</div>
+     <div><div class="fk">押付方式</div>${na(r.pay)}</div>
+     <div><div class="fk">实测距地铁</div><div class="fv">${r.mt} 米</div></div>
+     <div><div class="fk">同户型中位数</div><div class="fv">${r.mkt} 元</div></div>
+     <div><div class="fk">房源图片</div><div class="fv${r.img<3?" na":""}">${r.img} 张</div></div>
+     <div><div class="fk">出租方式</div><div class="fv">${r.rt}</div></div>
+    </div>
+   </div>
+   <div class="spacer"></div>
+   <div id="vd"></div>
+   <div class="spacer"></div>
+   <div class="card pad"><h3>质检维度</h3><div id="dims"></div></div>
+   <div id="rw"></div>
+   <div class="ops">
+    <button class="op pass" data-v="pass">通过并上架</button>
+    <button class="op rev" data-v="review">转人工复核</button>
+    <button class="op rej" data-v="reject">打回房东</button>
+   </div>
+   <div class="opnote" id="opnote"></div>`;
+  $("ed").addEventListener("input",paint);
+  document.querySelectorAll(".op").forEach(b=>b.onclick=()=>act(b.dataset.v));
+  paint();
 }
-function renderCheck(){
-  const r=readForm(),res=check(r);
-  const a=+$("thA").value,b=+$("thB").value,v=verdictOf(res.score,a,b);
-  const desc={pass:"信息完整、无命中项，可直接上架",review:"存在需要人工确认的项，进审核队列",reject:"命中硬性违规，退回房东修改后重提"}[v];
-  $("verdict").innerHTML=`<div class="verdict v-${v}">
-    <div class="score">${res.score}</div>
-    <div><div class="vt">${VN[v]}</div><div class="vd">${desc} · 阈值 ≤${a} 过 / ≥${b} 打回</div></div></div>`;
+
+function paint(){
+  const r={...D[curIdx],d:$("ed").value};
+  const res=check(r),v=verdictOf(res.score,pol.a,pol.b);
+  const sub={pass:"信息完整、无命中项，可直接上架",
+             review:"存在需要人工确认的项，进复核队列",
+             reject:"命中硬性违规，退回房东修改后重提"}[v];
+  $("vd").innerHTML=`<div class="verdict v-${v}"><div class="score">${res.score}</div>
+    <div><div class="vt">${VN[v]}</div><div class="vd">${sub} · 当前策略 ≤${pol.a} 过 / ≥${pol.b} 打回</div></div></div>`;
 
   $("dims").innerHTML=res.dims.map(d=>{
     const cls={ok:"p-ok",hit:"p-hit",warn:"p-warn"}[d.st];
@@ -545,7 +614,7 @@ function renderCheck(){
     return `<div class="dim"><div class="dimhd"><span class="nm">${d.n}</span>
       <span class="pill ${cls}">${lb}</span><span class="w">+${d.w}</span></div>
       ${d.hits.length?`<ul class="hits">${d.hits.map(h=>
-        `<li class="${h.k==='soft'?'soft':h.k==='info'?'info':''}">${h.s}</li>`).join("")}</ul>`:""}</div>`}).join("");
+        `<li class="${h.k==="soft"?"soft":h.k==="info"?"info":""}">${h.s}</li>`).join("")}</ul>`:""}</div>`}).join("");
 
   if(v==="pass"){$("rw").innerHTML=""}
   else{const rw=rewrite(r);
@@ -554,97 +623,117 @@ function renderCheck(){
       <div class="rwbody">${rw.d}</div>
       ${rw.auto.length?`<ul class="rwlist ok">${rw.auto.map(x=>`<li>${x}</li>`).join("")}</ul>`:
         `<div style="font-size:12.5px;color:var(--ink-3)">本条没有可安全自动修改的内容。</div>`}
-      ${rw.ask.length?`<div class="t ask">必须回给房东确认的部分</div>
-        <ul class="rwlist ask">${rw.ask.map(x=>`<li>${x}</li>`).join("")}</ul>
-        <div class="rwnote">这几项平台无从判断谁对谁错——描述和字段冲突，可能是描述写错，也可能是字段填错。
-        <b>代房东改，等于替他做了一个没有依据的断言，把一个错误变成两个。</b>所以只提示，不代改。</div>`:""}
+      ${rw.ask.length?`<div class="t ask">需要房东确认的部分</div>
+        <ul class="rwlist ask">${rw.ask.map(x=>`<li>${x}</li>`).join("")}</ul>`:""}
     </div>`}
-}
-pick.onchange=()=>{cur=D[+pick.value];fill(cur);renderCheck()};
-$("run").onclick=renderCheck;
-["f_title","f_desc","f_layout","f_deco","f_price","f_metro","f_orient","f_floor","f_pay"]
-  .forEach(id=>$(id).addEventListener("input",renderCheck));
 
-/* ═══════════ 渲染：评测台 ═══════════ */
+  document.querySelectorAll(".op").forEach(b=>b.classList.remove("sug"));
+  document.querySelector({pass:".op.pass",review:".op.rev",reject:".op.rej"}[v]).classList.add("sug");
+  $("opnote").textContent=`机检建议「${VN[v]}」，已高亮。最终以审核员判断为准。`;
+}
+
+function act(v){
+  ACT[D[curIdx].id]=v;
+  toast({pass:"已通过，房源上架",review:"已转人工复核队列",reject:"已打回房东，附修改建议"}[v]);
+  const nx=D.findIndex(r=>!ACT[r.id]);
+  if(nx>=0)curIdx=nx;
+  renderQueue();renderDetail();
+}
+
+/* ═══════════ 效果监控 ═══════════ */
 const ORD={pass:0,review:1,reject:2};
 function evaluate(){
-  const a=+$("thA").value,b=+$("thB").value;
+  const a=pol.a,b=pol.b;
   $("lblA").textContent=a;$("lblB").textContent=b;
+  $("pA").textContent=a;$("pB").textContent=b;
   const rs=D.map(r=>{const s=check(r).score;return{r,s,m:verdictOf(s,a,b)}});
 
-  let exact=0,autoPass=0,miss=[],fp=[];
+  let exact=0,autoPass=0;const miss=[],fp=[];
   const cm=[[0,0,0],[0,0,0],[0,0,0]];
   rs.forEach(x=>{
     cm[ORD[x.r.truth]][ORD[x.m]]++;
     if(x.m===x.r.truth)exact++;
     if(x.m==="pass")autoPass++;
-    if(ORD[x.m]<ORD[x.r.truth])miss.push(x);   // 机检比人工松 → 漏检
-    if(ORD[x.m]>ORD[x.r.truth])fp.push(x);     // 机检比人工严 → 误杀
+    if(ORD[x.m]<ORD[x.r.truth])miss.push(x);
+    if(ORD[x.m]>ORD[x.r.truth])fp.push(x);
   });
   const risky=D.filter(r=>r.truth!=="pass").length;
   const caught=rs.filter(x=>x.r.truth!=="pass"&&x.m!=="pass").length;
   const clean=D.filter(r=>r.truth==="pass").length;
   const fpN=rs.filter(x=>x.r.truth==="pass"&&x.m!=="pass").length;
+  const rec=caught/risky*100, fpr=fpN/clean*100, acc=exact/D.length*100, ap=autoPass/D.length*100;
 
-  const rec=(caught/risky*100), fpr=(fpN/clean*100), acc=(exact/D.length*100), ap=(autoPass/D.length*100);
-  $("kpis").innerHTML=[
-    ["风险房源召回率",rec.toFixed(0)+"%",`${caught}/${risky} 条非 pass 被拦下`,rec>=80?"pass":"review"],
-    ["正常房源误杀率",fpr.toFixed(0)+"%",`${fpN}/${clean} 条干净房源被卡`,fpr<=10?"pass":"reject"],
-    ["三档判定一致率",acc.toFixed(0)+"%",`${exact}/${D.length} 条与人工完全一致`,acc>=75?"pass":"review"],
-    ["自动通过占比",ap.toFixed(0)+"%",`可省掉的人工审核量`,"pass"]
+  const kpi=[
+    ["风险房源召回率",rec.toFixed(0)+"%",`${caught}/${risky} 条问题房源被拦下`,rec>=80?"pass":"review"],
+    ["正常房源误杀率",fpr.toFixed(0)+"%",`${fpN}/${clean} 条正常房源被卡`,fpr<=10?"pass":"reject"],
+    ["与人工判定一致率",acc.toFixed(0)+"%",`${exact}/${D.length} 条三档判定完全一致`,acc>=75?"pass":"review"],
+    ["免人工上架占比",ap.toFixed(0)+"%",`可省掉的人工审核量`,"pass"]
   ].map(([k,v,n,c])=>`<div class="kpi"><div class="k">${k}</div>
     <div class="v" style="color:var(--${c})">${v}</div><div class="n">${n}</div></div>`).join("");
+  $("kpis").innerHTML=kpi;$("kpis2").innerHTML=kpi;
 
-  const names=["pass 通过","review 转人工","reject 打回"];
-  let h=`<div class="hdr">人工＼机检</div>`+names.map(n=>`<div class="hdr">${n}</div>`).join("");
-  cm.forEach((row,i)=>{h+=`<div class="hdr" style="text-align:left">${names[i]}</div>`+
-    row.map((v,j)=>`<div class="${i===j?'diag':''} num">${v||"·"}</div>`).join("")});
+  const nm=["pass 免人工上架","review 转人工","reject 打回"];
+  let h=`<div class="hdr">人工＼机检</div>`+nm.map(n=>`<div class="hdr">${n}</div>`).join("");
+  cm.forEach((row,i)=>{h+=`<div class="hdr" style="text-align:left">${nm[i]}</div>`+
+    row.map((v,j)=>`<div class="${i===j?"diag":""} num">${v||"·"}</div>`).join("")});
   $("cm").innerHTML=h;
 
-  $("tradeoff").innerHTML=`<b>阈值权衡：</b>把「自动通过上限」从 ${a} 往上推，自动过的比例升、人工省得多，
-    但漏检也跟着涨；往下压则相反。当前 <b>${a}/${b}</b> 下：省掉 <b>${ap.toFixed(0)}%</b> 人工，
-    代价是漏检 <b>${miss.length}</b> 条、误杀 <b>${fp.length}</b> 条。
-    ${miss.length?`漏检里 <b>${miss.filter(x=>x.r.note&&x.r.note.includes("语义")).length}</b> 条是语义类违规（规则层结构性抓不到，需模型层补）。`:""}
-    <br><br><b>这套指标的已知局限（我自己先说）：</b>40 条样本太少，风险分呈离散分布，阈值在 10–32 区间怎么调结果都不变——
-    说明现在这条曲线只够定"大概哪一档"，定不了精确刀口。真要定阈值，样本量至少要到 300 条以上、且按真实驳回理由分层抽样。`;
+  const sem=miss.filter(x=>x.r.note&&x.r.note.indexOf("语义")>=0).length;
+  $("tradeoff").innerHTML=`当前策略下，${D.length} 条送审房源里 <b>${ap.toFixed(0)}%</b> 免人工直接上架，
+    问题房源召回 <b>${rec.toFixed(0)}%</b>，正常房源误杀 <b>${fpr.toFixed(0)}%</b>。
+    漏检 <b>${miss.length}</b> 条、误杀 <b>${fp.length}</b> 条。
+    ${sem?`漏检中 <b>${sem}</b> 条为不含任何违禁词的语义类违规，规则层结构性无法覆盖，需语义模型补。`:""}`;
+
+  $("thnote").innerHTML=`把「免人工上架上限」往上推，省下的人工更多，但漏检同步上升；往下压则相反。
+    当前 <b>${a} / ${b}</b>：省掉 <b>${ap.toFixed(0)}%</b> 人工，代价是漏检 <b>${miss.length}</b> 条、误杀 <b>${fp.length}</b> 条。`;
+
+  $("rollact").textContent=`把免人工上架上限从 ${a} 收紧到 ${Math.max(0,a-15)}，并暂停灰度扩量。`;
 
   $("legend").innerHTML=`　<span class="tag" style="background:var(--tag-miss);color:var(--reject)">红＝漏检</span>
     <span class="tag" style="background:var(--tag-fp);color:var(--review)">黄＝误杀</span>`;
 
   $("rows").innerHTML=rs.map(x=>{
     const bad=ORD[x.m]<ORD[x.r.truth], f=ORD[x.m]>ORD[x.r.truth];
-    const col=v=>({pass:"var(--pass)",review:"var(--review)",reject:"var(--reject)"}[v]);
-    const bg=v=>({pass:"var(--pass-bg)",review:"var(--review-bg)",reject:"var(--reject-bg)"}[v]);
-    return `<tr class="${bad?'bad':f?'fp':''}">
+    return `<tr class="${bad?"bad":f?"fp":""}">
       <td class="mono">${x.r.id}</td>
       <td>${x.r.t}<div class="tt">${x.r.dist}·${x.r.com}·${x.r.lay}·${x.r.p}元</div></td>
-      <td class="mono" style="font-weight:700;color:${col(x.m)}">${x.s}</td>
-      <td><span class="tag" style="background:${bg(x.m)};color:${col(x.m)}">${VN[x.m]}</span></td>
-      <td><span class="tag" style="background:${bg(x.r.truth)};color:${col(x.r.truth)}">${VN[x.r.truth]}</span></td>
+      <td class="mono" style="font-weight:700;color:${COL[x.m]}">${x.s}</td>
+      <td><span class="tag" style="background:${BG[x.m]};color:${COL[x.m]}">${VN[x.m]}</span></td>
+      <td><span class="tag" style="background:${BG[x.r.truth]};color:${COL[x.r.truth]}">${VN[x.r.truth]}</span></td>
       <td class="tt">${bad?"<b style='color:var(--reject)'>漏检 · </b>":f?"<b style='color:var(--review)'>误杀 · </b>":""}${x.r.note||(bad||f?"":"—")}</td>
     </tr>`}).join("");
-
-  /* 结论页联动 */
-  $("c1").innerHTML=`<b>建议上线，但只上「自动通过」这一档。</b>当前阈值 <span class="hl">≤${a} 自动过 / ≥${b} 直接打回</span>下，
-    <span class="hl">${ap.toFixed(0)}%</span> 的房源可以免人工直接上架，风险房源召回 <span class="hl">${rec.toFixed(0)}%</span>，
-    正常房源误杀 <span class="hl">${fpr.toFixed(0)}%</span>。`;
-  $("c2").innerHTML=`<b>灰度范围：先新房东，老房东不动。</b>新房东本来就走全量人工审核，机检哪怕判错也不会比现状更差；
-    老房东有历史信用分，误杀一次的关系成本高。跑两周看 <span class="hl">自动过房源的事后举报率</span>——
-    这才是真正的验收指标，比今天这几个离线数字更有决定权。`;
-  $("c3").innerHTML=`<b>回滚条件写死：</b>自动过房源的事后举报率若高于人工审核基线的 <span class="hl">1.5 倍</span>，
-    立即把自动通过上限从 ${a} 压到 ${Math.max(0,a-15)}，不用再开会讨论。`;
 }
-$("thA").oninput=()=>{if(+$("thA").value>=+$("thB").value)$("thB").value=+$("thA").value+1;evaluate();renderCheck()};
-$("thB").oninput=()=>{if(+$("thB").value<=+$("thA").value)$("thA").value=+$("thB").value-1;evaluate();renderCheck()};
 
-/* ═══════════ tabs ═══════════ */
-document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
-  document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x===b));
-  document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===b.dataset.t));
+/* ═══════════ 策略配置 ═══════════ */
+function syncPol(){evaluate();renderQueue();renderDetail()}
+$("thA").oninput=()=>{if(+$("thA").value>=+$("thB").value)$("thB").value=+$("thA").value+1;
+  pol.a=+$("thA").value;pol.b=+$("thB").value;syncPol()};
+$("thB").oninput=()=>{if(+$("thB").value<=+$("thA").value)$("thA").value=+$("thB").value-1;
+  pol.a=+$("thA").value;pol.b=+$("thB").value;syncPol()};
+
+function seg(id,key,after){
+  document.querySelectorAll(`#${id} button`).forEach(b=>b.onclick=()=>{
+    document.querySelectorAll(`#${id} button`).forEach(x=>x.classList.toggle("on",x===b));
+    pol[key]=b.dataset.v; if(after)after();
+  });
+}
+seg("segScope","scope");
+seg("segRoll","roll");
+$("save").onclick=()=>{
+  const sc={new:"仅新房东",all:"全量房东",off:"仅记录不生效"}[pol.scope];
+  toast(`已保存：≤${pol.a} 免人工 / ≥${pol.b} 打回 · ${sc} · 举报率超 ${pol.roll} 倍回滚`);
+};
+
+/* ═══════════ 导航 ═══════════ */
+function go(t){
+  document.querySelectorAll("nav button").forEach(x=>x.classList.toggle("on",x.dataset.t===t));
+  document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===t));
   window.scrollTo({top:0});
-});
+}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>go(b.dataset.t));
+document.querySelectorAll("[data-goto]").forEach(a=>a.onclick=()=>go(a.dataset.goto));
 
-pick.value=DEFAULT_IDX;fill(cur);renderCheck();evaluate();
+renderQueue();renderDetail();evaluate();
 </script>
 </body>
 </html>
