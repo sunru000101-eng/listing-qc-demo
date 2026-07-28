@@ -316,8 +316,7 @@ nav button.ext.on{background:var(--panel);color:var(--ink)}
   <div class="logo"><span class="dot"></span>房源质检工作台<span class="badge">概念原型</span></div>
   <nav>
    <button class="on" data-t="t1">审核工作台</button>
-   <button data-t="t2">效果监控</button>
-   <button data-t="t3">策略与灰度</button>
+   <button data-t="t3">效果与策略</button>
    <span class="navsep"></span>
    <button data-t="t4" class="ext">房东端 · 申诉</button>
   </nav>
@@ -340,8 +339,8 @@ nav button.ext.on{background:var(--panel);color:var(--ink)}
   </div>
   <div class="heronums">
    风险召回 <b id="h1v">—</b>　·　误杀 <b id="h2v">—</b>　·　免人工上架 <b id="h3v">—</b>　·　与人工判定一致 <b id="h4v">—</b>
-   <span class="hn2">这四个数是拿 40 条房源当场算出来的，可在 <a data-goto="t2">效果监控</a> 看逐条明细；
-    判定阈值、灰度范围、回滚条件在 <a data-goto="t3">策略与灰度</a> 里可调，调完这四个数实时跟着变。</span>
+   <span class="hn2">这四个数是拿 40 条房源当场算出来的。判定阈值、灰度范围、回滚条件都在
+    <a data-goto="t3">效果与策略</a> 里，调完这四个数实时跟着变。</span>
   </div>
  </div>
  <div class="split">
@@ -353,39 +352,31 @@ nav button.ext.on{background:var(--panel);color:var(--ink)}
  </div>
 </section>
 
-<section id="t2">
- <div class="polbar">
-  <span class="lb">当前生效策略</span>
-  风险分 ≤<b id="pA">30</b> 免人工上架，≥<b id="pB">70</b> 打回房东
-  <a data-goto="t3">调整策略 →</a>
- </div>
- <div class="surface in">内部　·　审核员工作台</div>
- <p class="tlead">机检判定和人工复核的对照。40 条房源每条都有人工复核结论作为基准，机检跑一遍比对——<b>这一页回答的是"凭什么信它"</b>。</p>
- <div class="kpis" id="kpis"></div>
- <div class="card pad">
-  <h3>机检判定 vs 人工复核</h3>
-  <div class="cm" id="cm"></div>
-  <div class="spacer"></div>
-  <div class="note" id="tradeoff"></div>
- </div>
- <div class="spacer"></div>
- <div class="card">
-  <div class="pad" style="padding-bottom:4px"><h3 style="margin:0">逐条结果 <span class="tt" id="legend"></span></h3></div>
-  <div class="scroll">
-   <table>
-    <thead><tr>
-     <th style="width:54px">编号</th><th>房源</th><th style="width:60px">风险分</th>
-     <th style="width:76px">机检</th><th style="width:80px">人工复核</th><th style="width:210px">差异</th>
-    </tr></thead>
-    <tbody id="rows"></tbody>
-   </table>
-  </div>
- </div>
-</section>
-
 <section id="t3">
  <div class="surface in">内部　·　审核员工作台</div>
- <p class="tlead">阈值决定多少房源能免人工上架、漏掉多少问题房源，<b>这是"能不能上线"真正要定的东西</b>。灰度范围和回滚条件一并配在这里，不靠开会决定。</p>
+ <p class="tlead">上半页是当前策略下的机检效果，下半页调策略——<b>调完上面的数实时跟着变</b>，这两件事本来就该放在一起看。
+  人工复核结论由人工标注，作为机检准确性的基准。</p>
+
+ <div class="kpis" id="kpis"></div>
+
+ <div class="card">
+  <div class="pad" style="padding-bottom:6px">
+   <h3 style="margin:0">判错的 <span id="badn"></span> 条 <span class="tt" id="legend"></span></h3>
+  </div>
+  <table>
+   <thead><tr>
+    <th style="width:54px">编号</th><th>房源</th><th style="width:60px">风险分</th>
+    <th style="width:76px">机检</th><th style="width:80px">人工复核</th><th style="width:210px">差异</th>
+   </tr></thead>
+   <tbody id="rows"></tbody>
+  </table>
+  <button class="opstoggle" id="alltg"><span class="cv">▶</span>展开全部 40 条明细<span class="n">默认只列判错的</span></button>
+ </div>
+
+ <div class="spacer"></div>
+ <div class="note" id="tradeoff"></div>
+ <div class="spacer"></div>
+
  <div class="card pad">
   <h3>判定阈值</h3>
   <div class="sliders">
@@ -398,9 +389,7 @@ nav button.ext.on{background:var(--panel);color:var(--ink)}
     <input type="range" id="thB" min="0" max="100" value="70">
    </div>
   </div>
-  <div class="spacer"></div>
-  <div class="kpis" id="kpis2"></div>
-  <div class="note" id="thnote"></div>
+  <div class="note" id="thnote" style="margin-top:15px"></div>
  </div>
 
  <div class="spacer"></div>
@@ -787,18 +776,16 @@ function act(v){
   renderQueue();renderDetail();
 }
 
-/* ═══════════ 效果监控 ═══════════ */
+/* ═══════════ 效果与策略 ═══════════ */
 const ORD={pass:0,review:1,reject:2};
+let showAll=false;
 function evaluate(){
   const a=pol.a,b=pol.b;
   $("lblA").textContent=a;$("lblB").textContent=b;
-  $("pA").textContent=a;$("pB").textContent=b;
   const rs=D.map(r=>{const s=check(r).score;return{r,s,m:verdictOf(s,a,b)}});
 
   let exact=0,autoPass=0;const miss=[],fp=[];
-  const cm=[[0,0,0],[0,0,0],[0,0,0]];
   rs.forEach(x=>{
-    cm[ORD[x.r.truth]][ORD[x.m]]++;
     if(x.m===x.r.truth)exact++;
     if(x.m==="pass")autoPass++;
     if(ORD[x.m]<ORD[x.r.truth])miss.push(x);
@@ -817,15 +804,10 @@ function evaluate(){
     ["免人工上架占比",ap.toFixed(0)+"%",`可省掉的人工审核量`,"pass"]
   ].map(([k,v,n,c])=>`<div class="kpi"><div class="k">${k}</div>
     <div class="v" style="color:var(--${c})">${v}</div><div class="n">${n}</div></div>`).join("");
-  $("kpis").innerHTML=kpi;$("kpis2").innerHTML=kpi;
+  $("kpis").innerHTML=kpi;
   $("h1v").textContent=rec.toFixed(0)+"%";$("h2v").textContent=fpr.toFixed(0)+"%";
   $("h3v").textContent=ap.toFixed(0)+"%";$("h4v").textContent=acc.toFixed(0)+"%";
 
-  const nm=["pass 免人工上架","review 转人工","reject 打回"];
-  let h=`<div class="hdr">人工＼机检</div>`+nm.map(n=>`<div class="hdr">${n}</div>`).join("");
-  cm.forEach((row,i)=>{h+=`<div class="hdr" style="text-align:left">${nm[i]}</div>`+
-    row.map((v,j)=>`<div class="${i===j?"diag":""} num">${v||"·"}</div>`).join("")});
-  $("cm").innerHTML=h;
 
   const sem=miss.filter(x=>x.r.note&&x.r.note.indexOf("语义")>=0).length;
   $("tradeoff").innerHTML=`当前策略下，${D.length} 条送审房源里 <b>${ap.toFixed(0)}%</b> 免人工直接上架，
@@ -841,7 +823,9 @@ function evaluate(){
   $("legend").innerHTML=`　<span class="tag" style="background:var(--tag-miss);color:var(--reject)">红＝漏检</span>
     <span class="tag" style="background:var(--tag-fp);color:var(--review)">黄＝误杀</span>`;
 
-  $("rows").innerHTML=rs.map(x=>{
+  $("badn").textContent=miss.length+fp.length;
+  const shown=showAll?rs:rs.filter(x=>ORD[x.m]!==ORD[x.r.truth]);
+  $("rows").innerHTML=shown.map(x=>{
     const bad=ORD[x.m]<ORD[x.r.truth], f=ORD[x.m]>ORD[x.r.truth];
     return `<tr class="${bad?"bad":f?"fp":""}">
       <td class="mono">${x.r.id}</td>
@@ -866,6 +850,13 @@ function seg(id,key,after){
     pol[key]=b.dataset.v; if(after)after();
   });
 }
+$("alltg").onclick=()=>{
+  showAll=!showAll;
+  $("alltg").classList.toggle("open",showAll);
+  $("alltg").querySelector("span.n").textContent=showAll?"含判对的 35 条":"默认只列判错的";
+  $("alltg").childNodes[1].nodeValue=showAll?"收起，只看判错的":"展开全部 40 条明细";
+  evaluate();
+};
 seg("segScope","scope");
 seg("segRoll","roll");
 $("save").onclick=()=>{
