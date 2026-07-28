@@ -265,6 +265,21 @@ pre{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;pad
 .tooln{font:600 13px/1 var(--mono);color:var(--accent)}
 .toold{font-size:12.5px;color:var(--ink-2);margin-top:4px}
 .toolp{font:11.5px/1.5 var(--mono);color:var(--ink-3);margin-top:4px}
+/* ── 概览 ── */
+.hero{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+.hero .h1{margin:0 0 16px;font-size:14px;line-height:1.8;color:var(--ink-2);max-width:840px}
+.hero .h1 b{color:var(--ink);font-weight:600}
+.flow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:15px}
+.step{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 13px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.step.go{cursor:pointer;border-color:var(--accent);color:var(--accent);background:var(--accent-bg)}
+.step.ok{border-color:var(--pass-bd);color:var(--pass);background:var(--pass-bg)}
+.ar{font-size:11px;color:var(--ink-3);font-weight:600;white-space:nowrap}
+.heronums{border-top:1px solid var(--line-2);padding-top:13px;font-size:13px;color:var(--ink-2)}
+.heronums b{font-family:var(--mono);color:var(--ink);font-size:15px;letter-spacing:-.3px}
+.hn2{display:block;margin-top:7px;font-size:12px;color:var(--ink-3);line-height:1.7}
+.hn2 a{color:var(--accent);cursor:pointer;font-weight:600}
+.tlead{font-size:13px;color:var(--ink-2);line-height:1.75;margin:0 0 15px;max-width:820px}
+.tlead b{color:var(--ink)}
 </style>
 </head>
 <body>
@@ -284,6 +299,22 @@ pre{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;pad
 <div class="wrap">
 
 <section id="t1" class="on">
+ <div class="hero">
+  <p class="h1">房东提交房源后，先过一遍<b>上架前 AI 质检</b>，输出「免人工上架 / 转人工 / 打回」三档判定；
+   被打回的房源不进死胡同——房东可以在<b>申诉通道</b>和 Agent 对话把问题补正，达标后自动重新上架。</p>
+  <div class="flow">
+   <div class="step">房东提交</div><div class="ar">→</div>
+   <div class="step">AI 质检打分</div><div class="ar">→</div>
+   <div class="step go" data-goto="t1">审核员决策</div><div class="ar">若打回 →</div>
+   <div class="step go" data-goto="t4">房东申诉补正</div><div class="ar">达标 →</div>
+   <div class="step ok">重新上架</div>
+  </div>
+  <div class="heronums">
+   风险召回 <b id="h1v">—</b>　·　误杀 <b id="h2v">—</b>　·　免人工上架 <b id="h3v">—</b>　·　与人工判定一致 <b id="h4v">—</b>
+   <span class="hn2">这四个数是拿 40 条房源当场算出来的，可在 <a data-goto="t2">效果监控</a> 看逐条明细；
+    判定阈值、灰度范围、回滚条件在 <a data-goto="t3">策略与灰度</a> 里可调，调完这四个数实时跟着变。</span>
+  </div>
+ </div>
  <div class="split">
   <div class="card">
    <div class="qhd">待审队列<span class="n" id="qn"></span></div>
@@ -299,6 +330,7 @@ pre{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;pad
   风险分 ≤<b id="pA">30</b> 免人工上架，≥<b id="pB">70</b> 打回房东
   <a data-goto="t3">调整策略 →</a>
  </div>
+ <p class="tlead">机检判定和人工复核的对照。40 条房源每条都有人工复核结论作为基准，机检跑一遍比对——<b>这一页回答的是"凭什么信它"</b>。</p>
  <div class="kpis" id="kpis"></div>
  <div class="card pad">
   <h3>机检判定 vs 人工复核</h3>
@@ -322,6 +354,7 @@ pre{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;pad
 </section>
 
 <section id="t3">
+ <p class="tlead">阈值决定多少房源能免人工上架、漏掉多少问题房源，<b>这是"能不能上线"真正要定的东西</b>。灰度范围和回滚条件一并配在这里，不靠开会决定。</p>
  <div class="card pad">
   <h3>判定阈值</h3>
   <div class="sliders">
@@ -753,6 +786,8 @@ function evaluate(){
   ].map(([k,v,n,c])=>`<div class="kpi"><div class="k">${k}</div>
     <div class="v" style="color:var(--${c})">${v}</div><div class="n">${n}</div></div>`).join("");
   $("kpis").innerHTML=kpi;$("kpis2").innerHTML=kpi;
+  $("h1v").textContent=rec.toFixed(0)+"%";$("h2v").textContent=fpr.toFixed(0)+"%";
+  $("h3v").textContent=ap.toFixed(0)+"%";$("h4v").textContent=acc.toFixed(0)+"%";
 
   const nm=["pass 免人工上架","review 转人工","reject 打回"];
   let h=`<div class="hdr">人工＼机检</div>`+nm.map(n=>`<div class="hdr">${n}</div>`).join("");
