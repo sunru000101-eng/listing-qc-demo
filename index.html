@@ -11,6 +11,13 @@
   --pass:#1a8a5a; --pass-bg:#e8f6ef; --review:#b06e00; --review-bg:#fdf3e0; --reject:#c62f3d; --reject-bg:#fdecee;
   --accent:#2f5bd9; --accent-bg:#ecf1fe;
   --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  /* 半透明色一律用 rgba 写死，不用 color-mix()——微信安卓内置浏览器（X5 内核）
+     很多机型还停在 Chrome 86 左右，不支持 color-mix，会导致评测台里
+     标红的漏检行、标黄的误杀行整片失效，而那正是这个 demo 最关键的部分。*/
+  --pass-bd:rgba(26,138,90,.30); --review-bd:rgba(176,110,0,.30); --reject-bd:rgba(198,47,61,.30);
+  --note-bd:rgba(47,91,217,.25); --rw-bd:rgba(26,138,90,.22); --mark-bg:rgba(198,47,61,.25);
+  --row-bad:rgba(198,47,61,.07); --row-fp:rgba(176,110,0,.08); --diag-bg:rgba(26,138,90,.11);
+  --tag-miss:rgba(198,47,61,.18); --tag-fp:rgba(176,110,0,.20);
 }
 @media (prefers-color-scheme:dark){
   :root{
@@ -18,6 +25,10 @@
     --line:#262c36; --line-2:#1f242c;
     --pass:#4ecb8d; --pass-bg:#123024; --review:#e0a54a; --review-bg:#2e2415; --reject:#f2757f; --reject-bg:#33191d;
     --accent:#7fa0ff; --accent-bg:#18213a;
+    --pass-bd:rgba(78,203,141,.30); --review-bd:rgba(224,165,74,.30); --reject-bd:rgba(242,117,127,.30);
+    --note-bd:rgba(127,160,255,.25); --rw-bd:rgba(78,203,141,.22); --mark-bg:rgba(242,117,127,.25);
+    --row-bad:rgba(242,117,127,.10); --row-fp:rgba(224,165,74,.11); --diag-bg:rgba(78,203,141,.13);
+    --tag-miss:rgba(242,117,127,.20); --tag-fp:rgba(224,165,74,.22);
   }
 }
 *{box-sizing:border-box}
@@ -66,9 +77,9 @@ label:first-of-type{margin-top:0}
 .verdict .score{font:700 34px/1 var(--mono);letter-spacing:-1px}
 .verdict .vt{font-weight:700;font-size:15px}
 .verdict .vd{font-size:12.5px;opacity:.85}
-.v-pass{background:var(--pass-bg);border-color:color-mix(in srgb,var(--pass) 30%,transparent);color:var(--pass)}
-.v-review{background:var(--review-bg);border-color:color-mix(in srgb,var(--review) 30%,transparent);color:var(--review)}
-.v-reject{background:var(--reject-bg);border-color:color-mix(in srgb,var(--reject) 30%,transparent);color:var(--reject)}
+.v-pass{background:var(--pass-bg);border-color:var(--pass-bd);color:var(--pass)}
+.v-review{background:var(--review-bg);border-color:var(--review-bd);color:var(--review)}
+.v-reject{background:var(--reject-bg);border-color:var(--reject-bd);color:var(--reject)}
 
 .dim{border-top:1px solid var(--line-2);padding:11px 0}
 .dim:first-child{border-top:0;padding-top:0}
@@ -86,13 +97,13 @@ label:first-of-type{margin-top:0}
 .hits li.soft{border-left-color:var(--review)}
 .hits li.info{border-left-color:var(--accent)}
 .hits li b{color:var(--ink);font-weight:600}
-mark{background:color-mix(in srgb,var(--reject) 25%,transparent);color:inherit;border-radius:3px;padding:0 2px}
+mark{background:var(--mark-bg);color:inherit;border-radius:3px;padding:0 2px}
 
 .rewrite{margin-top:14px;background:var(--panel);border:1px solid var(--line);
   border-radius:9px;padding:12px 14px;font-size:13px;line-height:1.7}
 .rewrite .t{font:600 11px/1 var(--mono);color:var(--pass);letter-spacing:.05em;margin-bottom:7px}
 .rewrite .t.ask{color:var(--review);margin-top:14px}
-.rwbody{background:var(--pass-bg);border:1px solid color-mix(in srgb,var(--pass) 22%,transparent);
+.rwbody{background:var(--pass-bg);border:1px solid var(--rw-bd);
   border-radius:7px;padding:10px 12px;margin-bottom:9px}
 .rwlist{margin:0;padding-left:17px;font-size:12.5px;line-height:1.8}
 .rwlist.ok li{color:var(--pass)}
@@ -119,8 +130,8 @@ table{width:100%;border-collapse:collapse;font-size:12.5px}
 th{text-align:left;font-size:11px;color:var(--ink-3);font-weight:600;letter-spacing:.04em;
   padding:8px 10px;border-bottom:1px solid var(--line);position:sticky;top:57px;background:var(--panel)}
 td{padding:8px 10px;border-bottom:1px solid var(--line-2);vertical-align:top}
-tr.bad{background:color-mix(in srgb,var(--reject) 7%,transparent)}
-tr.fp{background:color-mix(in srgb,var(--review) 8%,transparent)}
+tr.bad{background:var(--row-bad)}
+tr.fp{background:var(--row-fp)}
 tr:hover{background:var(--accent-bg)}
 .tag{font:600 10.5px/1 var(--mono);padding:3.5px 6px;border-radius:4px;white-space:nowrap}
 .scroll{max-height:520px;overflow:auto;border-radius:0 0 12px 12px}
@@ -131,10 +142,10 @@ tr:hover{background:var(--accent-bg)}
   border:1px solid var(--line);border-radius:9px;overflow:hidden;font-size:12.5px}
 .cm div{background:var(--panel);padding:9px 11px;text-align:center}
 .cm .hdr{background:var(--panel-2);font-size:11px;color:var(--ink-3);font-weight:600}
-.cm .diag{background:color-mix(in srgb,var(--pass) 11%,var(--panel));font-weight:700}
+.cm .diag{background:var(--diag-bg);font-weight:700}
 .cm .num{font-family:var(--mono);font-weight:600}
 
-.note{background:var(--accent-bg);border:1px solid color-mix(in srgb,var(--accent) 25%,transparent);
+.note{background:var(--accent-bg);border:1px solid var(--note-bd);
   border-radius:10px;padding:13px 16px;font-size:13px;line-height:1.7;color:var(--ink-2)}
 .note b{color:var(--ink)}
 
@@ -597,8 +608,8 @@ function evaluate(){
     <br><br><b>这套指标的已知局限（我自己先说）：</b>40 条样本太少，风险分呈离散分布，阈值在 10–32 区间怎么调结果都不变——
     说明现在这条曲线只够定"大概哪一档"，定不了精确刀口。真要定阈值，样本量至少要到 300 条以上、且按真实驳回理由分层抽样。`;
 
-  $("legend").innerHTML=`　<span class="tag" style="background:color-mix(in srgb,var(--reject) 18%,transparent);color:var(--reject)">红＝漏检</span>
-    <span class="tag" style="background:color-mix(in srgb,var(--review) 20%,transparent);color:var(--review)">黄＝误杀</span>`;
+  $("legend").innerHTML=`　<span class="tag" style="background:var(--tag-miss);color:var(--reject)">红＝漏检</span>
+    <span class="tag" style="background:var(--tag-fp);color:var(--review)">黄＝误杀</span>`;
 
   $("rows").innerHTML=rs.map(x=>{
     const bad=ORD[x.m]<ORD[x.r.truth], f=ORD[x.m]>ORD[x.r.truth];
