@@ -455,6 +455,7 @@ const D=[
 /* 装修声明词表：check()、rewrite()、agIssues() 必须用同一个。
    三处各写各的会导致"Agent 认为没问题了，但引擎还在扣分"——
    Agent 的眼睛和打分引擎不一致，循环就会误判成"改不动了，转人工"。*/
+const effLen=d=>(d||"").replace(/[\s，。、！？；：""（）]/g,"").length;
 const DECO_CLAIM=/精装|豪装|刚装修|重新装修|全屋定制|拎包入住/;
 const CN={"一":1,"两":2,"二":2,"三":3,"四":4,"五":5};
 /* 只判"后来者"重复：首次上架的房源不该因为被别人盗图而受罚 */
@@ -506,6 +507,8 @@ function check(r){
   if(miss.length){w3+=32+(miss.length-1)*8;
     h3.push({k:"soft",s:`+${32+(miss.length-1)*8} · 缺必填字段 <b>${miss.join("、")}</b> —— 必填项缺失一律不进自动通过`})}
   if(r.img<3){w3+=20;h3.push({k:"soft",s:`+20 · 图片仅 <b>${r.img}</b> 张（低于 3 张下限）`})}
+  if(effLen(r.d)<12){w3+=32;
+    h3.push({k:"soft",s:`+32 · 描述有效内容仅 <b>${effLen(r.d)}</b> 字，租客无从判断房源情况 —— 内容过少不进自动通过`})}
   w3=Math.min(58,w3);
   add("信息完整度",w3,h3,w3>0?"warn":"ok");
 
@@ -742,7 +745,8 @@ function agIssues(r){
   const ms=[];if(!r.or)ms.push("朝向");if(!r.fl)ms.push("楼层");if(!r.pay)ms.push("押付方式");
   if(ms.length)out.push({k:"miss",fields:ms,w:32+(ms.length-1)*8,auto:0});
   if(r.img<3)out.push({k:"img",w:20,auto:0});
-  return out.sort((a,b)=>b.w-a.w);
+  if(effLen(r.d)<12)out.push({k:"desc",w:32,auto:0});
+  return out.filter(x=>!(r._ack&&r._ack[x.k])).sort((a,b)=>b.w-a.w);
 }
 
 /* ── 需要房东回答的问题 ── */
@@ -750,8 +754,9 @@ const ASK={
  deco:r=>({q:`描述里写的是「精装修」，但装修字段填的是「${r.dec}」，两边对不上。房子实际是哪一种？`,
    o:[{t:"实际是精装修，是字段填错了",f:()=>({dec:"精装"}),s:"装修字段 → 精装"},
       {t:`实际就是${r.dec}，描述写夸张了`,
-        f:r=>({d:r.d.split(/(?<=[，。！？])/).filter(c=>!DECO_CLAIM.test(c)).join("").replace(/^[，。、\s]+/,"").trim()||"（描述已清空，请重新填写）"}),
-        s:"删除描述中所有装修相关表述"}]}),
+        f:r=>({d:r.d.split(/(?<=[，。！？])/).filter(c=>!DECO_CLAIM.test(c)).join("").replace(/^[，。、\s]+/,"").trim()||"（描述已清空，请重新填写）",
+               _human:"房东承认描述与实际不符，本次转人工复核并记录一次不实描述"}),
+        s:"删除装修相关表述 · 标记为不实描述"}]}),
  layout:r=>({q:`描述里提到「${r._cn}居」，但户型字段是「${r.lay}」。是哪种情况？`,
    o:[{t:"户型字段填错了，实际就是这么多间",f:r=>({lay:r._cn+"室2厅"}),s:"户型字段 → 与描述一致"},
       {t:"是隔断改出来的，我把描述改回原始户型",f:r=>({d:r.d.replace(/([0-9一两二三四五])(室|房|居)/g,parseInt(r.lay)+"居")}),s:"描述户型 → 回到原始户型"}]}),
@@ -760,7 +765,7 @@ const ASK={
  img:r=>({q:`房源图片只有 ${r.img} 张，低于 3 张下限，租客看不清楚房子。`,
    o:[{t:"我再传几张实拍图",f:()=>({img:8}),s:"图片数 → 8 张"}]}),
  price:r=>({q:`您填的月租 ${r.p} 元，比同小区同户型中位数 ${r.mkt} 元低 ${Math.abs(((r.p-r.mkt)/r.mkt*100)).toFixed(0)}%。价格明显低于市场是虚假房源的高危信号，需要确认。`,
-   o:[{t:"价格没错，房子老旧且急租",f:()=>({_human:"价格经房东确认属实，需人工核验房源真实性"}),s:"标记转人工核验"},
+   o:[{t:"价格没错，房子老旧且急租",f:()=>({_human:"价格经房东确认属实，需人工核验房源真实性",_ack:{price:1}}),s:"标记转人工核验"},
       {t:"我填错了，改成市场价",f:r=>({p:r.mkt}),s:`月租 → ${r?r.mkt:""} 元`}]})
 };
 
@@ -791,7 +796,15 @@ function agStep(){
   const iss=agIssues(AG.r);
   tcall("get_listing_issues",null,`${iss.length} 项命中`,iss.map(x=>x.k).join(", ")||"无");
 
-  if(AG.r._human){agEnd("review",AG.r._human);return}
+  const hard0=iss.find(x=>x.hard);
+  if(!hard0&&AG.r._human){
+    const a2=iss.find(x=>x.auto);
+    if(!a2){
+      say("agent",`能自动处理的我都处理完了。<b>不过这条不能直接自动上架</b>——${AG.r._human}。`
+        +`<br><br>审核同学会尽快看，通过后房源就会展示出来。以后如实填写就不会走到这一步。`);
+      agEnd("review",AG.r._human);return;
+    }
+  }
 
   if(!iss.length){
     const s=check(AG.r).score,v=verdictOf(s,pol.a,pol.b);
@@ -822,7 +835,8 @@ function agStep(){
     if(auto.k==="banned"){
       const sb=stripBanned(AG.r);
       const changedT=sb.t!==AG.r.t;
-      AG.r={...AG.r,t:sb.t,d:sb.d||"（描述已清空，请重新填写）"};
+      AG.r={...AG.r,t:sb.t,d:sb.d||"（描述已清空，请重新填写）",
+        _human:"房源含平台禁止的表述，已清理但本次需人工复核后方可上架"};
       desc=`删除「${auto.cat}」表述${changedT?"（标题+描述）":"（描述）"}`;
       tcall("update_listing",(changedT?`field="t", value="${sb.t}"; `:"")+`field="d", value="${AG.r.d.slice(0,20)}…"`,"已更新",desc);
       say("agent",`您的${changedT?"标题和描述":"描述"}里有「<b>${auto.terms.join("、")}</b>」，属于平台禁止的${auto.cat}表述，我已经清掉了${changedT?"——标题里删词，描述里整句删除":"整句"}。`);
