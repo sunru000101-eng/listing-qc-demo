@@ -48,7 +48,8 @@ h2{font-size:19px;margin:0 0 4px;letter-spacing:-.3px}
 
 /* tab1 layout */
 .split{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:16px;align-items:start}
-@media(max-width:900px){.split{grid-template-columns:1fr}}
+/* 手机上把质检结果顶到表单前面——首屏必须先看到判定，而不是先看到一堆输入框 */
+@media(max-width:900px){.split{grid-template-columns:1fr}.split>*:nth-child(2){order:-1}}
 
 select,textarea,input[type=text],input[type=password]{
   width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
@@ -453,7 +454,10 @@ function rewrite(r,res){
 }
 
 /* ═══════════ 渲染：质检台 ═══════════ */
-let cur=D[0];
+/* 默认加载 L05：装修字段冲突 + 地铁距离虚标两倍。
+   开局就得让人看见"它真的在交叉核对数据"，别让首屏停在一条 0 分的干净房源上。*/
+const DEFAULT_IDX=D.findIndex(r=>r.id==="L05");
+let cur=D[DEFAULT_IDX];
 const $=id=>document.getElementById(id);
 const pick=$("pick");
 D.forEach((r,i)=>{const o=document.createElement("option");o.value=i;
@@ -580,7 +584,7 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{
   window.scrollTo({top:0});
 });
 
-fill(cur);renderCheck();evaluate();
+pick.value=DEFAULT_IDX;fill(cur);renderCheck();evaluate();
 </script>
 </body>
 </html>
