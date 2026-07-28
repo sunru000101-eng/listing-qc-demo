@@ -307,6 +307,8 @@ nav button.ext.on{background:var(--panel);color:var(--ink)}
 .opstoggle .n{margin-left:auto;font:600 11px/1 var(--mono);color:var(--ink-3)}
 .opsbody{display:none;border-top:1px solid var(--line)}
 .opsbody.open{display:block}
+.rotext{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+  padding:10px 12px;font-size:13.5px;line-height:1.75;color:var(--ink)}
 </style>
 </head>
 <body>
@@ -531,6 +533,10 @@ const D=[
 ];
 
 /* ═══════════ 规则引擎 ═══════════ */
+/* 装修声明词表：check()、rewrite()、agIssues() 必须用同一个。
+   三处各写各的会导致"Agent 认为没问题了，但引擎还在扣分"——
+   Agent 的眼睛和打分引擎不一致，循环就会误判成"改不动了，转人工"。*/
+const DECO_CLAIM=/精装|豪装|刚装修|重新装修|全屋定制|拎包入住/;
 const CN={"一":1,"两":2,"二":2,"三":3,"四":4,"五":5};
 /* 只判"后来者"重复：首次上架的房源不该因为被别人盗图而受罚 */
 const dupOf=(()=>{const seen={},m={};
@@ -557,7 +563,7 @@ function check(r){
 
   /* 2 描述↔字段冲突 */
   let h2=[],w2=0;
-  const decoClaim=/精装|豪装|全屋定制|刚装修|重新装修/.test(txt);
+  const decoClaim=DECO_CLAIM.test(txt);
   if(decoClaim&&/毛坯|简装/.test(r.dec)){w2+=35;
     h2.push({k:"hard",s:`+35 · 描述称<mark>精装</mark>，但装修字段为 <b>${r.dec}</b>`})}
   let claimN=0;
@@ -643,7 +649,7 @@ function rewrite(r){
     auto.push(`地铁距离按平台实测值订正为 ${r.mt} 米`);
   }
 
-  if(/精装|豪装|刚装修|重新装修/.test(t)&&/毛坯|简装/.test(r.dec))
+  if(DECO_CLAIM.test(t)&&/毛坯|简装/.test(r.dec))
     ask.push(`描述称精装，装修字段填的是「${r.dec}」—— 请确认哪个准确`);
   let claimN=0;
   (t.match(/([0-9一两二三四五])(室|房|居)/g)||[]).forEach(s=>{
@@ -706,8 +712,8 @@ function renderDetail(){
    <div class="card pad">
     <div class="dhd"><h4>${r.t}</h4>
      <div class="meta">${r.id} · ${r.dist}·${r.com} · ${r.lay} · ${r.area}㎡ · ${r.p}元/月 · ${r.rt}</div></div>
-    <label>房源描述（可编辑，改完自动重新质检）</label>
-    <textarea id="ed" rows="4">${r.d}</textarea>
+    <label>房源描述　·　房东提交内容，审核员只读</label>
+    <div class="rotext">${r.d}</div>
     <div class="fields">
      <div><div class="fk">装修</div>${na(r.dec)}</div>
      <div><div class="fk">朝向</div>${na(r.or)}</div>
@@ -730,13 +736,12 @@ function renderDetail(){
     <button class="op rej" data-v="reject">打回房东</button>
    </div>
    <div class="opnote" id="opnote"></div>`;
-  $("ed").addEventListener("input",paint);
   document.querySelectorAll(".op").forEach(b=>b.onclick=()=>act(b.dataset.v));
   paint();
 }
 
 function paint(){
-  const r={...D[curIdx],d:$("ed").value};
+  const r=D[curIdx];
   const res=check(r),v=verdictOf(res.score,pol.a,pol.b);
   const sub={pass:"信息完整、无命中项，可直接上架",
              review:"存在需要人工确认的项，进复核队列",
@@ -896,8 +901,8 @@ function agIssues(r){
   const mc=(()=>{const a=t.match(/地铁[^，。]{0,6}?(?:仅|约|只)?\s*([0-9]+)\s*米/);
     if(a)return +a[1];const b=t.match(/(?:步行|走路|走)\s*([0-9]+)\s*分钟(?:到|至|即到)?地铁/);return b?+b[1]*80:null})();
   if(mc&&r.mt>mc*2)out.push({k:"metro",claim:mc,w:45,auto:1});
-  if(Math.abs((r.p-r.mkt)/r.mkt)>=.35)out.push({k:"price",w:36,auto:0});
-  if(/精装|豪装|刚装修|重新装修/.test(t)&&/毛坯|简装/.test(r.dec))out.push({k:"deco",w:35,auto:0});
+  if(Math.abs((r.p-r.mkt)/r.mkt)>=.20)out.push({k:"price",w:36,auto:0});
+  if(DECO_CLAIM.test(t)&&/毛坯|简装/.test(r.dec))out.push({k:"deco",w:35,auto:0});
   let cn=0;(t.match(/([0-9一两二三四五])(室|房|居)/g)||[]).forEach(x=>{const n=CN[x[0]]||parseInt(x[0]);if(n>cn)cn=n});
   const rn=parseInt(r.lay)||0;
   if(cn&&rn&&cn!==rn)out.push({k:"layout",claim:cn,w:32,auto:0});
@@ -911,7 +916,9 @@ function agIssues(r){
 const ASK={
  deco:r=>({q:`描述里写的是「精装修」，但装修字段填的是「${r.dec}」，两边对不上。房子实际是哪一种？`,
    o:[{t:"实际是精装修，是字段填错了",f:()=>({dec:"精装"}),s:"装修字段 → 精装"},
-      {t:`实际就是${r.dec}，描述写夸张了`,f:r=>({d:r.d.replace(/精装修|精装|豪装|刚装修|重新装修/g,r.dec)}),s:"描述中的装修表述 → 与字段一致"}]}),
+      {t:`实际就是${r.dec}，描述写夸张了`,
+        f:r=>({d:r.d.split(/(?<=[，。！？])/).filter(c=>!DECO_CLAIM.test(c)).join("").replace(/^[，。、\s]+/,"").trim()||"（描述已清空，请重新填写）"}),
+        s:"删除描述中所有装修相关表述"}]}),
  layout:r=>({q:`描述里提到「${r._cn}居」，但户型字段是「${r.lay}」。是哪种情况？`,
    o:[{t:"户型字段填错了，实际就是这么多间",f:r=>({lay:r._cn+"室2厅"}),s:"户型字段 → 与描述一致"},
       {t:"是隔断改出来的，我把描述改回原始户型",f:r=>({d:r.d.replace(/([0-9一两二三四五])(室|房|居)/g,parseInt(r.lay)+"居")}),s:"描述户型 → 回到原始户型"}]}),
@@ -958,7 +965,9 @@ function agStep(){
     tcall("recheck_listing",null,`score=${s}, verdict=${v}`,null);
     if(v==="pass"){
       tcall("submit_for_review",null,"ok=true",null);
-      say("agent",`问题都处理完了，风险分从 <b>${check(AG.base).score}</b> 降到 <b>${s}</b>，已经帮您重新提交并上架。`);
+      const thin=AG.r.d.length<14||AG.r.d.indexOf("请重新填写")>=0;
+      say("agent",`问题都处理完了，风险分从 <b>${check(AG.base).score}</b> 降到 <b>${s}</b>，已经帮您重新提交并上架。`
+        +(thin?`<br><br>不过删掉不实表述后描述只剩很短一段，<b>建议您补一段符合实际情况的介绍</b>，租客看得清楚才容易租出去。`:""));
       agEnd("pass",`风险分 ${s}，已自动上架`);
     }else{
       say("agent",`还剩风险分 <b>${s}</b>，没到自动上架的线，我已经转给审核同学人工看一下。`);
