@@ -683,13 +683,13 @@ function paint(){
   else{const rw=rewrite(r);
     $("rw").innerHTML=`<div class="rewrite">
       <div class="rwhd">打回房东时附带的整改要求</div>
-      ${rw.auto.length?`<div class="t">平台可代为订正　·　有客观依据，房东在申诉通道确认后生效</div>
+      ${rw.auto.length?`<div class="t">平台可给出订正建议　·　需房东在申诉通道点确认才生效</div>
         <ul class="rwlist ok">${rw.auto.map(x=>`<li>${x}</li>`).join("")}</ul>`:""}
       ${rw.ask.length?`<div class="t ask">需房东本人确认或补充　·　平台无从判断，不代改</div>
         <ul class="rwlist ask">${rw.ask.map(x=>`<li>${x}</li>`).join("")}</ul>`:""}
       ${!rw.auto.length&&!rw.ask.length?`<div style="font-size:12.5px;color:var(--ink-3)">本条无可自动生成的整改项，请人工填写打回理由。</div>`:""}
       <div class="rwnote">审核员只做判定，<b>不修改房东提交的内容</b>。所有文案改动都发生在房东侧的申诉通道，
-       由房东在对话中确认后才生效——平台不能替房东做他没同意过的表述。</div>
+       由房东在对话中逐条点确认后才生效。<b>平台一个字都不替房东改</b>——有把握判断他写错了，不等于有权改他署名发布的内容。</div>
     </div>`}
 
   document.querySelectorAll(".op").forEach(b=>b.classList.remove("sug"));
@@ -732,11 +732,11 @@ function agIssues(r){
   LEX.forEach(L=>{
     if(L.exempt&&r.rt===L.exempt)return;
     const m=t.match(new RegExp(L.re.source,"g"));if(!m)return;
-    out.push({k:"banned",cat:L.cat,terms:[...new Set(m)],w:Math.min(L.cap,L.w*[...new Set(m)].length),auto:1});
+    out.push({k:"banned",cat:L.cat,terms:[...new Set(m)],w:Math.min(L.cap,L.w*[...new Set(m)].length),auto:0});
   });
   const mc=(()=>{const a=t.match(/地铁[^，。]{0,6}?(?:仅|约|只)?\s*([0-9]+)\s*米/);
     if(a)return +a[1];const b=t.match(/(?:步行|走路|走)\s*([0-9]+)\s*分钟(?:到|至|即到)?地铁/);return b?+b[1]*80:null})();
-  if(mc&&r.mt>mc*2)out.push({k:"metro",claim:mc,w:45,auto:1});
+  if(mc&&r.mt>mc*2)out.push({k:"metro",claim:mc,w:45,auto:0});
   if(Math.abs((r.p-r.mkt)/r.mkt)>=.20)out.push({k:"price",w:36,auto:0});
   if(DECO_CLAIM.test(t)&&/毛坯|简装/.test(r.dec))out.push({k:"deco",w:35,auto:0});
   let cn=0;(t.match(/([0-9一两二三四五])(室|房|居)/g)||[]).forEach(x=>{const n=CN[x[0]]||parseInt(x[0]);if(n>cn)cn=n});
@@ -751,6 +751,23 @@ function agIssues(r){
 
 /* ── 需要房东回答的问题 ── */
 const ASK={
+  banned:r=>({q:`您的房源里有「<b>${r._terms}</b>」，属于平台禁止的${r._cat}表述，<b>不能发布</b>。建议把相关内容删掉。`,
+   o:[{t:"同意，删掉这部分",
+       f:r=>{const sb=stripBanned(r);return{t:sb.t,d:sb.d||"（描述已清空，请重新填写）",
+         _human:"房源含平台禁止的表述，已按房东确认清理，本次需人工复核后方可上架"}},
+       s:"删除违禁表述（房东已确认）"},
+      {t:"我自己重写这段描述",
+       f:()=>({_human:"房东选择自行重写描述，本次转人工",_ack:{banned:1}}),
+       s:"标记转人工，等房东自行修改"}]}),
+ metro:r=>({q:`描述里写「距地铁 ${r._claim} 米」，平台实测是 <b>${r.mt} 米</b>，差得比较多。<br>建议改成「距离地铁站约 ${r.mt} 米」，您确认一下？`,
+   o:[{t:`确认，按实测 ${r.mt} 米修改`,
+       f:r=>({d:r.d.replace(/(?:仅|约|只)?\s*[0-9]+\s*米/,`约${r.mt}米`)
+              .replace(/(?:步行|走路|走)\s*[0-9]+\s*分钟(?=(?:到|至|即到)?地铁)/,`步行约${Math.round(r.mt/80)}分钟`)
+              .replace(/[，、]?\s*出门就是/,"")}),
+       s:"地铁距离按实测值订正（房东已确认）"},
+      {t:"实测数据不对，我要人工核实",
+       f:()=>({_human:"房东对平台实测距离有异议，转人工核实",_ack:{metro:1}}),
+       s:"标记转人工核实"}]}),
  deco:r=>({q:`描述里写的是「精装修」，但装修字段填的是「${r.dec}」，两边对不上。房子实际是哪一种？`,
    o:[{t:"实际是精装修，是字段填错了",f:()=>({dec:"精装"}),s:"装修字段 → 精装"},
       {t:`实际就是${r.dec}，描述写夸张了`,
@@ -798,9 +815,8 @@ function agStep(){
 
   const hard0=iss.find(x=>x.hard);
   if(!hard0&&AG.r._human){
-    const a2=iss.find(x=>x.auto);
-    if(!a2){
-      say("agent",`能自动处理的我都处理完了。<b>不过这条不能直接自动上架</b>——${AG.r._human}。`
+    {
+      say("agent",`您确认的修改我都已经应用了。<b>不过这条不能直接自动上架</b>——${AG.r._human}。`
         +`<br><br>审核同学会尽快看，通过后房源就会展示出来。以后如实填写就不会走到这一步。`);
       agEnd("review",AG.r._human);return;
     }
@@ -828,35 +844,9 @@ function agStep(){
     agEnd("reject","图片重复上架，转人工核实");render();return;
   }
 
-  const auto=iss.find(x=>x.auto);
-  if(auto){
-    const before=check(AG.r).score;
-    let desc="";
-    if(auto.k==="banned"){
-      const sb=stripBanned(AG.r);
-      const changedT=sb.t!==AG.r.t;
-      AG.r={...AG.r,t:sb.t,d:sb.d||"（描述已清空，请重新填写）",
-        _human:"房源含平台禁止的表述，已清理但本次需人工复核后方可上架"};
-      desc=`删除「${auto.cat}」表述${changedT?"（标题+描述）":"（描述）"}`;
-      tcall("update_listing",(changedT?`field="t", value="${sb.t}"; `:"")+`field="d", value="${AG.r.d.slice(0,20)}…"`,"已更新",desc);
-      say("agent",`您的${changedT?"标题和描述":"描述"}里有「<b>${auto.terms.join("、")}</b>」，属于平台禁止的${auto.cat}表述，我已经清掉了${changedT?"——标题里删词，描述里整句删除":"整句"}。`);
-    }else{
-      const d=AG.r.d.replace(/(?:仅|约|只)?\s*[0-9]+\s*米/,`约${AG.r.mt}米`)
-        .replace(/(?:步行|走路|走)\s*[0-9]+\s*分钟(?=(?:到|至|即到)?地铁)/,`步行约${Math.round(AG.r.mt/80)}分钟`)
-        .replace(/[，、]?\s*出门就是/,"");
-      AG.r={...AG.r,d};
-      desc=`地铁距离 ${auto.claim} 米 → 实测 ${AG.r.mt} 米`;
-      tcall("update_listing",`field="d", value="…约${AG.r.mt}米…"`,"已更新",desc);
-      say("agent",`描述里写「距地铁 ${auto.claim} 米」，平台实测是 <b>${AG.r.mt} 米</b>。实测值是平台数据，我直接按它订正了，这一条不用您确认。`);
-    }
-    const after=check(AG.r).score;
-    tcall("recheck_listing",null,`score=${after}`,{from:before,to:after});
-    say("sys",`风险分 <b>${before}</b> → <b>${after}</b>`);
-    render();setTimeout(agStep,650);return;
-  }
-
   const it=iss[0];
-  const ctx={...AG.r,_cn:it.claim,_ms:it.fields};
+  const ctx={...AG.r,_cn:it.claim,_claim:it.claim,_ms:it.fields,
+    _terms:(it.terms||[]).join("、"),_cat:it.cat};
   const a=ASK[it.k](ctx);
   AG.ask={type:it.k,opts:a.o};
   say("agent",a.q);
