@@ -224,6 +224,47 @@ pre{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;pad
   padding:11px 20px;border-radius:9px;font-size:13px;font-weight:600;opacity:0;pointer-events:none;
   transition:opacity .2s;z-index:60}
 .toast.on{opacity:1}
+/* ── 申诉 Agent ── */
+.agpick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.agpick button{border:1px solid var(--line);background:var(--panel);color:var(--ink-2);border-radius:9px;
+  padding:9px 13px;font:inherit;font-size:12.5px;cursor:pointer;display:flex;align-items:center;gap:7px}
+.agpick button.on{border-color:var(--accent);background:var(--accent-bg);color:var(--ink);font-weight:600}
+.agpick .sc{font:700 12.5px/1 var(--mono)}
+.agwrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,420px);gap:16px;align-items:start}
+@media(max-width:940px){.agwrap{grid-template-columns:1fr}}
+.chat{padding:16px 18px;min-height:400px;max-height:560px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+.msg{max-width:84%;padding:10px 13px;border-radius:12px;font-size:13.5px;line-height:1.65}
+.msg.a{background:var(--panel-2);border:1px solid var(--line-2);border-bottom-left-radius:4px;align-self:flex-start}
+.msg.u{background:var(--accent);color:#fff;border-bottom-right-radius:4px;align-self:flex-end}
+.msg.sys{align-self:center;background:transparent;border:1px dashed var(--line);color:var(--ink-3);
+  font-size:12px;max-width:92%;text-align:center;padding:8px 12px}
+.msg .who{font-size:10.5px;opacity:.6;font-weight:600;margin-bottom:3px;letter-spacing:.04em}
+.replies{display:flex;flex-direction:column;gap:7px;padding:0 18px 16px}
+.replies button{border:1px solid var(--accent);background:var(--panel);color:var(--accent);border-radius:9px;
+  padding:9px 13px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left}
+.replies button:hover{background:var(--accent-bg)}
+.agdone{margin:0 18px 16px;padding:11px 14px;border-radius:9px;font-size:13px;font-weight:600;text-align:center}
+
+/* 轨迹 */
+.trace{padding:14px 16px;max-height:560px;overflow:auto}
+.trrow{border-left:2px solid var(--line);padding:0 0 14px 13px;position:relative}
+.trrow:last-child{padding-bottom:0}
+.trrow::before{content:"";position:absolute;left:-5px;top:4px;width:8px;height:8px;border-radius:50%;
+  background:var(--accent);border:2px solid var(--panel)}
+.trturn{font:600 10.5px/1 var(--mono);color:var(--ink-3);letter-spacing:.05em;margin-bottom:7px}
+.trcall{font:600 12.5px/1.4 var(--mono);color:var(--accent);margin-bottom:4px}
+.trarg{font:11.5px/1.55 var(--mono);color:var(--ink-3);background:var(--panel-2);border:1px solid var(--line-2);
+  border-radius:6px;padding:6px 8px;margin-bottom:5px;word-break:break-all}
+.trret{font-size:12px;color:var(--ink-2);line-height:1.6}
+.trret b{font-family:var(--mono);color:var(--ink)}
+.trscore{font:700 12.5px/1 var(--mono)}
+
+/* 工具定义 */
+.tool{border-top:1px solid var(--line-2);padding:11px 0}
+.tool:first-child{border-top:0;padding-top:0}
+.tooln{font:600 13px/1 var(--mono);color:var(--accent)}
+.toold{font-size:12.5px;color:var(--ink-2);margin-top:4px}
+.toolp{font:11.5px/1.5 var(--mono);color:var(--ink-3);margin-top:4px}
 </style>
 </head>
 <body>
@@ -234,6 +275,7 @@ pre{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;pad
   <nav>
    <button class="on" data-t="t1">审核工作台</button>
    <button data-t="t2">效果监控</button>
+   <button data-t="t4">房东申诉</button>
    <button data-t="t3">策略与灰度</button>
   </nav>
  </div>
@@ -333,6 +375,35 @@ pre{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;pad
  <button class="btn" id="save">保存配置</button>
 </section>
 
+<section id="t4">
+ <div class="polbar" style="margin-bottom:14px">
+  <span class="lb">申诉通道</span>
+  房源被打回后，房东在这里与 Agent 对话补正；Agent 调用质检工具重跑，达标自动重提上架。
+ </div>
+ <div class="agpick" id="agpick"></div>
+ <div class="agwrap">
+  <div class="card">
+   <div class="qhd">房东视角<span class="n" id="agturn"></span></div>
+   <div class="chat" id="chat"></div>
+   <div class="replies" id="replies"></div>
+   <div id="agdone"></div>
+  </div>
+  <div class="card">
+   <div class="qhd">Agent 运行轨迹<span class="n" id="agcalls"></span></div>
+   <div class="trace" id="trace"></div>
+  </div>
+ </div>
+ <div class="spacer"></div>
+ <div class="card pad">
+  <h3>Agent 可调用的工具（4）</h3>
+  <div id="tools"></div>
+  <div class="rwnote" style="margin-top:14px">
+   决策策略当前为<b>规则驱动</b>（按扣分从高到低处理未解决项，有权威依据的直接改、无依据的问房东），
+   未接入语言模型。工具调用与风险分变化<b>全部为真实计算</b>——调的就是审核工作台同一套质检引擎。
+  </div>
+ </div>
+</section>
+
 <div class="foot">
  <details>
   <summary>关于这个原型</summary>
@@ -354,8 +425,8 @@ pre{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;pad
 /* ═══════════ 词表：字面违规 ═══════════ */
 /* w = 单个词的分值；命中多个不同词累加，按 cap 封顶 */
 const LEX=[
- {re:/学区房|对口(名校|重点|小学|中学)|包(入学|上学|落户|户口)/g,cat:"虚假承诺",w:38,cap:76,tip:"教育/户口承诺，平台明令禁止且投诉高发"},
- {re:/不租(给)?(外地|本地以外)|限本地(人|户口)|只租(本地人|公务员)/g,cat:"地域歧视",w:80,cap:80,tip:"地域/身份歧视，法律与舆情双重风险，零容忍"},
+ {re:/学区房|对口[^，。！？\s]{0,6}(?:小学|中学|学校|名校|初中|高中)|对口(?:名校|重点校)|包(入学|上学|落户|户口)/g,cat:"虚假承诺",w:38,cap:76,tip:"教育/户口承诺，平台明令禁止且投诉高发"},
+ {re:/不租(?:给)?(?:外地|本地以外)人?|限本地(人|户口)|只租(本地人|公务员)/g,cat:"地域歧视",w:80,cap:80,tip:"地域/身份歧视，法律与舆情双重风险，零容忍"},
  {re:/升值|投资回报|稳赚|保底收益|包租(婆|公)?收益/g,cat:"投资诱导",w:38,cap:76,tip:"租赁房源不得出现投资理财话术"},
  {re:/绝对安全|100%|百分之百|全网最低|第一品牌|最好的房子|无敌/g,cat:"绝对化用语",w:26,cap:78,tip:"《广告法》绝对化用语风险，单条偶发可容忍、密集出现即打回"},
  {re:/限(男|女)(生|士|性|租客)?/g,cat:"性别限制",w:80,cap:80,tip:"整租房源设置性别门槛构成歧视",exempt:"合租"}
@@ -485,16 +556,27 @@ const VN={pass:"自动通过",review:"转人工",reject:"打回"};
    不自动改「不知道哪边是真的」的部分：
      · 装修 / 户型冲突 —— 可能是描述写错，也可能是字段填错，平台无从判断。
        硬改等于替房东做了一个没有依据的断言，把一个错误变成两个。交回房东确认。 */
-function rewrite(r){
-  let d=r.d;const auto=[],ask=[];
-
+/* 违禁表述必须同时清标题和描述——check() 扫的是 t+d，
+   只改描述会出现「改了但分数不降」，房东按建议改完照样过不了。
+   描述整句删（句子有标点边界），标题只删词再收空格（标题没有句子结构）。*/
+function stripBanned(r){
+  let t=r.t,d=r.d;const hit=[];
   LEX.forEach(L=>{
     if(L.exempt&&r.rt===L.exempt)return;
-    if(!new RegExp(L.re.source).test(d))return;
-    auto.push(`删除含「${L.cat}」的整句`);
-    d=d.replace(new RegExp(L.re.source,"g"),"▓");
+    const inT=new RegExp(L.re.source).test(t), inD=new RegExp(L.re.source).test(d);
+    if(!inT&&!inD)return;
+    if(inT)t=t.replace(new RegExp(L.re.source,"g"),"").replace(/\s+/g," ").trim();
+    if(inD)d=d.replace(new RegExp(L.re.source,"g"),"▓");
+    hit.push({cat:L.cat,where:inT&&inD?"标题与描述":inT?"标题":"描述"});
   });
-  if(d.includes("▓"))d=d.replace(/[^。！？]*▓[^。！？]*[。！？]?/g,"");
+  if(d.indexOf("▓")>=0)d=d.replace(/[^。！？]*▓[^。！？]*[。！？]?/g,"");
+  return{t,d,hit};
+}
+
+function rewrite(r){
+  const sb=stripBanned(r);
+  let d=sb.d;const nt=sb.t;const auto=[],ask=[];
+  sb.hit.forEach(h=>auto.push(`删除${h.where}中含「${h.cat}」的表述`));
 
   const t=r.t+" "+r.d;
   const m1=t.match(/地铁[^，。]{0,6}?(?:仅|约|只)?\s*([0-9]+)\s*米/);
@@ -521,7 +603,7 @@ function rewrite(r){
   if(r.img<3)ask.push(`补充房源图片至 3 张以上（当前 ${r.img} 张）`);
 
   d=d.replace(/^[，。、\s]+/,"").trim();
-  return{d:d||"（违规内容占比过高，建议房东重写描述）",auto,ask};
+  return{t:nt,tChanged:nt!==r.t,d:d||"（违规内容占比过高，建议房东重写描述）",auto,ask};
 }
 
 /* ═══════════ 渲染层 ═══════════ */
@@ -620,7 +702,7 @@ function paint(){
   else{const rw=rewrite(r);
     $("rw").innerHTML=`<div class="rewrite">
       <div class="t">机器直接改掉的部分</div>
-      <div class="rwbody">${rw.d}</div>
+      <div class="rwbody">${rw.tChanged?`<b>标题</b>　${rw.t}<br><b>描述</b>　`:""}${rw.d}</div>
       ${rw.auto.length?`<ul class="rwlist ok">${rw.auto.map(x=>`<li>${x}</li>`).join("")}</ul>`:
         `<div style="font-size:12.5px;color:var(--ink-3)">本条没有可安全自动修改的内容。</div>`}
       ${rw.ask.length?`<div class="t ask">需要房东确认的部分</div>
@@ -732,6 +814,201 @@ function go(t){
 }
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>go(b.dataset.t));
 document.querySelectorAll("[data-goto]").forEach(a=>a.onclick=()=>go(a.dataset.goto));
+
+/* ═══════════ 房东申诉 Agent ═══════════
+   工具调用与分数变化全部走真实的 check() 引擎；
+   决策策略为规则驱动（未接入模型），每一步都在右侧轨迹里显式暴露。 */
+const TOOLS=[
+ {n:"get_listing_issues",d:"读取当前房源的质检命中项，按扣分排序",p:"—",r:"[{类型, 原文片段, 扣分, 是否有权威依据}]"},
+ {n:"update_listing",d:"更新房源的描述或结构化字段",p:"field: string, value: any",r:"更新后的房源快照"},
+ {n:"recheck_listing",d:"用质检引擎重新计算风险分与三档判定",p:"—",r:"{score: number, verdict: pass|review|reject}"},
+ {n:"submit_for_review",d:"重新提交上架，仅当风险分低于免人工阈值时才会成功",p:"—",r:"{ok: boolean, msg: string}"}
+];
+const AG={r:null,base:null,trace:[],turn:0,max:8,done:false,ask:null};
+
+/* ── 结构化问题提取（Agent 的"眼睛"）── */
+function agIssues(r){
+  const t=r.t+" "+r.d,out=[];
+  if(dupOf[r.id])out.push({k:"dup",w:75,hard:1});
+  LEX.forEach(L=>{
+    if(L.exempt&&r.rt===L.exempt)return;
+    const m=t.match(new RegExp(L.re.source,"g"));if(!m)return;
+    out.push({k:"banned",cat:L.cat,terms:[...new Set(m)],w:Math.min(L.cap,L.w*[...new Set(m)].length),auto:1});
+  });
+  const mc=(()=>{const a=t.match(/地铁[^，。]{0,6}?(?:仅|约|只)?\s*([0-9]+)\s*米/);
+    if(a)return +a[1];const b=t.match(/(?:步行|走路|走)\s*([0-9]+)\s*分钟(?:到|至|即到)?地铁/);return b?+b[1]*80:null})();
+  if(mc&&r.mt>mc*2)out.push({k:"metro",claim:mc,w:45,auto:1});
+  if(Math.abs((r.p-r.mkt)/r.mkt)>=.35)out.push({k:"price",w:36,auto:0});
+  if(/精装|豪装|刚装修|重新装修/.test(t)&&/毛坯|简装/.test(r.dec))out.push({k:"deco",w:35,auto:0});
+  let cn=0;(t.match(/([0-9一两二三四五])(室|房|居)/g)||[]).forEach(x=>{const n=CN[x[0]]||parseInt(x[0]);if(n>cn)cn=n});
+  const rn=parseInt(r.lay)||0;
+  if(cn&&rn&&cn!==rn)out.push({k:"layout",claim:cn,w:32,auto:0});
+  const ms=[];if(!r.or)ms.push("朝向");if(!r.fl)ms.push("楼层");if(!r.pay)ms.push("押付方式");
+  if(ms.length)out.push({k:"miss",fields:ms,w:32+(ms.length-1)*8,auto:0});
+  if(r.img<3)out.push({k:"img",w:20,auto:0});
+  return out.sort((a,b)=>b.w-a.w);
+}
+
+/* ── 需要房东回答的问题 ── */
+const ASK={
+ deco:r=>({q:`描述里写的是「精装修」，但装修字段填的是「${r.dec}」，两边对不上。房子实际是哪一种？`,
+   o:[{t:"实际是精装修，是字段填错了",f:()=>({dec:"精装"}),s:"装修字段 → 精装"},
+      {t:`实际就是${r.dec}，描述写夸张了`,f:r=>({d:r.d.replace(/精装修|精装|豪装|刚装修|重新装修/g,r.dec)}),s:"描述中的装修表述 → 与字段一致"}]}),
+ layout:r=>({q:`描述里提到「${r._cn}居」，但户型字段是「${r.lay}」。是哪种情况？`,
+   o:[{t:"户型字段填错了，实际就是这么多间",f:r=>({lay:r._cn+"室2厅"}),s:"户型字段 → 与描述一致"},
+      {t:"是隔断改出来的，我把描述改回原始户型",f:r=>({d:r.d.replace(/([0-9一两二三四五])(室|房|居)/g,parseInt(r.lay)+"居")}),s:"描述户型 → 回到原始户型"}]}),
+ miss:r=>({q:`还有必填项没填完：${r._ms.join("、")}。补齐才能进入自动上架，现在补吗？`,
+   o:[{t:"现在补上",f:()=>({or:"南",fl:"6/18",pay:"押一付三"}),s:"补齐朝向、楼层、押付方式"}]}),
+ img:r=>({q:`房源图片只有 ${r.img} 张，低于 3 张下限，租客看不清楚房子。`,
+   o:[{t:"我再传几张实拍图",f:()=>({img:8}),s:"图片数 → 8 张"}]}),
+ price:r=>({q:`您填的月租 ${r.p} 元，比同小区同户型中位数 ${r.mkt} 元低 ${Math.abs(((r.p-r.mkt)/r.mkt*100)).toFixed(0)}%。价格明显低于市场是虚假房源的高危信号，需要确认。`,
+   o:[{t:"价格没错，房子老旧且急租",f:()=>({_human:"价格经房东确认属实，需人工核验房源真实性"}),s:"标记转人工核验"},
+      {t:"我填错了，改成市场价",f:r=>({p:r.mkt}),s:`月租 → ${r?r.mkt:""} 元`}]})
+};
+
+/* ── 记录一次工具调用 ── */
+function tcall(name,args,ret,extra){AG.trace.push({turn:AG.turn,name,args,ret,extra});}
+
+function say(who,text){
+  const c=$("chat");const d=document.createElement("div");
+  d.className="msg "+(who==="agent"?"a":who==="user"?"u":"sys");
+  d.innerHTML=who==="sys"?text:`<div class="who">${who==="agent"?"质检助手":"房东"}</div>${text}`;
+  c.appendChild(d);c.scrollTop=c.scrollHeight;
+}
+
+function agInit(r){
+  AG.r={...r};AG.base=r;AG.trace=[];AG.turn=0;AG.done=false;AG.ask=null;
+  $("chat").innerHTML="";$("replies").innerHTML="";$("agdone").innerHTML="";
+  const s=check(r).score,v=verdictOf(s,pol.a,pol.b);
+  say("sys",`房源 <b>${r.id}</b>「${r.t}」被${VN[v]}，风险分 <b>${s}</b>　·　房东进入申诉通道`);
+  say("user","为什么我的房源没通过？");
+  agStep();
+}
+
+function agStep(){
+  if(AG.done)return;
+  if(AG.turn>=AG.max){agEnd("review","对话轮次达到上限，已转人工处理");return}
+  AG.turn++;
+
+  const iss=agIssues(AG.r);
+  tcall("get_listing_issues",null,`${iss.length} 项命中`,iss.map(x=>x.k).join(", ")||"无");
+
+  if(AG.r._human){agEnd("review",AG.r._human);return}
+
+  if(!iss.length){
+    const s=check(AG.r).score,v=verdictOf(s,pol.a,pol.b);
+    tcall("recheck_listing",null,`score=${s}, verdict=${v}`,null);
+    if(v==="pass"){
+      tcall("submit_for_review",null,"ok=true",null);
+      say("agent",`问题都处理完了，风险分从 <b>${check(AG.base).score}</b> 降到 <b>${s}</b>，已经帮您重新提交并上架。`);
+      agEnd("pass",`风险分 ${s}，已自动上架`);
+    }else{
+      say("agent",`还剩风险分 <b>${s}</b>，没到自动上架的线，我已经转给审核同学人工看一下。`);
+      agEnd("review",`风险分 ${s}，转人工复核`);
+    }
+    render();return;
+  }
+
+  const hard=iss.find(x=>x.hard);
+  if(hard){
+    say("agent",`这条房源的图片与更早上架的 <b>${dupOf[AG.r.id]}</b> 完全一致，涉嫌重复上架。<b>这类问题申诉通道处理不了</b>，已转人工核实。`);
+    agEnd("reject","图片重复上架，转人工核实");render();return;
+  }
+
+  const auto=iss.find(x=>x.auto);
+  if(auto){
+    const before=check(AG.r).score;
+    let desc="";
+    if(auto.k==="banned"){
+      const sb=stripBanned(AG.r);
+      const changedT=sb.t!==AG.r.t;
+      AG.r={...AG.r,t:sb.t,d:sb.d||"（描述已清空，请重新填写）"};
+      desc=`删除「${auto.cat}」表述${changedT?"（标题+描述）":"（描述）"}`;
+      tcall("update_listing",(changedT?`field="t", value="${sb.t}"; `:"")+`field="d", value="${AG.r.d.slice(0,20)}…"`,"已更新",desc);
+      say("agent",`您的${changedT?"标题和描述":"描述"}里有「<b>${auto.terms.join("、")}</b>」，属于平台禁止的${auto.cat}表述，我已经清掉了${changedT?"——标题里删词，描述里整句删除":"整句"}。`);
+    }else{
+      const d=AG.r.d.replace(/(?:仅|约|只)?\s*[0-9]+\s*米/,`约${AG.r.mt}米`)
+        .replace(/(?:步行|走路|走)\s*[0-9]+\s*分钟(?=(?:到|至|即到)?地铁)/,`步行约${Math.round(AG.r.mt/80)}分钟`)
+        .replace(/[，、]?\s*出门就是/,"");
+      AG.r={...AG.r,d};
+      desc=`地铁距离 ${auto.claim} 米 → 实测 ${AG.r.mt} 米`;
+      tcall("update_listing",`field="d", value="…约${AG.r.mt}米…"`,"已更新",desc);
+      say("agent",`描述里写「距地铁 ${auto.claim} 米」，平台实测是 <b>${AG.r.mt} 米</b>。实测值是平台数据，我直接按它订正了，这一条不用您确认。`);
+    }
+    const after=check(AG.r).score;
+    tcall("recheck_listing",null,`score=${after}`,{from:before,to:after});
+    say("sys",`风险分 <b>${before}</b> → <b>${after}</b>`);
+    render();setTimeout(agStep,650);return;
+  }
+
+  const it=iss[0];
+  const ctx={...AG.r,_cn:it.claim,_ms:it.fields};
+  const a=ASK[it.k](ctx);
+  AG.ask={type:it.k,opts:a.o};
+  say("agent",a.q);
+  render();
+}
+
+function agAnswer(i){
+  const o=AG.ask.opts[i];
+  say("user",o.t);
+  const before=check(AG.r).score;
+  const patch=o.f(AG.r);
+  AG.r={...AG.r,...patch};
+  tcall("update_listing",Object.keys(patch).filter(k=>k[0]!=="_").map(k=>`${k}=${JSON.stringify(AG.r[k]).slice(0,28)}`).join(", ")||"—","已更新",o.s);
+  const after=check(AG.r).score;
+  tcall("recheck_listing",null,`score=${after}`,{from:before,to:after});
+  if(after!==before)say("sys",`风险分 <b>${before}</b> → <b>${after}</b>`);
+  AG.ask=null;$("replies").innerHTML="";
+  render();setTimeout(agStep,650);
+}
+
+function agEnd(v,msg){
+  AG.done=true;AG.ask=null;
+  const c={pass:"var(--pass)",review:"var(--review)",reject:"var(--reject)"}[v];
+  const b={pass:"var(--pass-bg)",review:"var(--review-bg)",reject:"var(--reject-bg)"}[v];
+  $("replies").innerHTML="";
+  $("agdone").innerHTML=`<div class="agdone" style="background:${b};color:${c}">
+    会话结束 · ${VN[v]}　—　${msg}</div>`;
+}
+
+function render(){
+  $("agturn").textContent=`第 ${AG.turn} / ${AG.max} 轮`;
+  $("agcalls").textContent=`${AG.trace.length} 次工具调用`;
+  let last=-1;
+  $("trace").innerHTML=AG.trace.map(t=>{
+    const head=t.turn!==last?`<div class="trturn">TURN ${t.turn}</div>`:"";last=t.turn;
+    let ret=`<div class="trret">→ ${t.ret}</div>`;
+    if(t.extra&&t.extra.from!==undefined){
+      const up=t.extra.to>t.extra.from;
+      ret=`<div class="trret">→ 风险分 <span class="trscore" style="color:var(--ink-3)">${t.extra.from}</span>
+        → <span class="trscore" style="color:${up?"var(--reject)":"var(--pass)"}">${t.extra.to}</span></div>`;
+    }else if(typeof t.extra==="string"&&t.extra){ret+=`<div class="trret" style="color:var(--ink-3)">${t.extra}</div>`}
+    return `${head}<div class="trrow"><div class="trcall">${t.name}()</div>
+      ${t.args?`<div class="trarg">${t.args}</div>`:""}${ret}</div>`;
+  }).join("")||`<div style="color:var(--ink-3);font-size:12.5px">尚无调用</div>`;
+
+  $("replies").innerHTML=AG.ask?AG.ask.opts.map((o,i)=>
+    `<button data-i="${i}">${o.t}</button>`).join(""):"";
+  document.querySelectorAll("#replies button").forEach(b=>b.onclick=()=>agAnswer(+b.dataset.i));
+}
+
+/* ── 房源选择器：挑几条不同类型的被拦房源 ── */
+const AGCASES=["L05","L03","L10","L34","L25"];
+function agPick(){
+  $("agpick").innerHTML=AGCASES.map(id=>{
+    const r=D.find(x=>x.id===id),s=check(r).score,v=verdictOf(s,pol.a,pol.b);
+    return `<button data-id="${id}"><span class="sc" style="color:${COL[v]}">${s}</span>
+      ${r.id} · ${r.t.slice(0,14)}</button>`}).join("");
+  document.querySelectorAll("#agpick button").forEach(b=>b.onclick=()=>{
+    document.querySelectorAll("#agpick button").forEach(x=>x.classList.toggle("on",x===b));
+    agInit(D.find(r=>r.id===b.dataset.id));render();});
+  $("agpick").firstElementChild.classList.add("on");
+}
+$("tools").innerHTML=TOOLS.map(t=>`<div class="tool">
+  <div class="tooln">${t.n}()</div><div class="toold">${t.d}</div>
+  <div class="toolp">参数：${t.p}　·　返回：${t.r}</div></div>`).join("");
+agPick();agInit(D.find(r=>r.id==="L05"));render();
 
 renderQueue();renderDetail();evaluate();
 </script>
